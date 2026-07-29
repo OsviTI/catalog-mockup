@@ -18,8 +18,12 @@ export default function ProductEditorModal({ productId, open, onClose }: Product
   const product = useCatalogStore((state) =>
     state.workspace.products.find((item) => item.id === productId),
   )
-  const categories = useCatalogStore((state) =>
-    state.workspace.categories.filter((item) => item.catalogId === product?.catalogId),
+  const allCategories = useCatalogStore(
+    (state) => state.workspace.categories,
+  )
+  const categories = useMemo(
+    () => allCategories.filter((item) => item.catalogId === product?.catalogId),
+    [allCategories, product?.catalogId],
   )
   const updateProduct = useCatalogStore((state) => state.updateProduct)
   const [draft, setDraft] = useState<Product | null>(null)
