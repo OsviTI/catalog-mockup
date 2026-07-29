@@ -8,7 +8,12 @@ import {
   removeAsset,
   requestPersistentStorage,
 } from '../lib/database'
-import { buildImportComparison } from '../lib/reconciliation'
+import {
+  buildImportComparison,
+  invalidConflictResolutionIds,
+  normalizeProductCode,
+  productDifferences,
+} from '../lib/reconciliation'
 import { migrateWorkspace } from '../lib/workspaceMigration'
 import type {
   Catalog,
@@ -17,7 +22,9 @@ import type {
   CatalogVersion,
   Category,
   CreativeAsset,
+  ConflictResolution,
   ImportableProductField,
+  ImportSession,
   MissingResolution,
   PdfCandidate,
   PdfDiagnostics,
@@ -82,6 +89,16 @@ interface CatalogStore {
     changeId: string,
     resolution: MissingResolution,
   ) => void
+  updateImportChangeIncoming: (
+    sessionId: string,
+    changeId: string,
+    patch: Partial<Product>,
+  ) => void
+  setConflictResolution: (
+    sessionId: string,
+    changeId: string,
+    resolution: ConflictResolution,
+  ) => void
   applyImportSession: (sessionId: string) => void
   deleteImportSession: (sessionId: string) => void
   updateProductPrices: (catalogId: string, prices: Record<string, number>) => void
@@ -124,6 +141,22 @@ const applyTemplateDefaults = (catalog: Catalog, template: CatalogTemplate) => {
     ...template.defaultTheme,
   }
   catalog.updatedAt = new Date().toISOString()
+}
+
+const refreshImportSessionStatus = (session: ImportSession) => {
+  if (session.status === 'applied' || session.status === 'failed' || session.status === 'analyzing') {
+    return
+  }
+  const hasPendingMissing = session.changes.some(
+    (change) => change.kind === 'missing' && (change.missingResolution ?? 'pending') === 'pending',
+  )
+  const hasPendingConflict = session.changes.some(
+    (change) =>
+      change.kind === 'conflict' &&
+      (change.conflictResolution ?? 'pending') === 'pending',
+  )
+  session.status = hasPendingMissing || hasPendingConflict ? 'needs-review' : 'ready'
+  session.updatedAt = new Date().toISOString()
 }
 
 export const useCatalogStore = create<CatalogStore>()(
@@ -368,19 +401,20 @@ export const useCatalogStore = create<CatalogStore>()(
         )
         const changes = buildImportComparison(currentProducts, products, importedFields)
         commit((workspace) => {
-          workspace.importSessions.unshift({
+          const session: ImportSession = {
             id,
             catalogId,
             source: 'excel',
             sourceName,
-            status: changes.some((change) => change.kind === 'conflict')
-              ? 'needs-review'
-              : 'ready',
+            status: 'needs-review',
             createdAt,
             updatedAt: createdAt,
             warnings,
+            importedFields,
             changes,
-          })
+          }
+          refreshImportSessionStatus(session)
+          workspace.importSessions.unshift(session)
           workspace.activity.unshift(
             activity(catalogId, 'imported', `Se comparó la planilla “${sourceName}”.`),
           )
@@ -460,10 +494,7 @@ export const useCatalogStore = create<CatalogStore>()(
             (product) => product.catalogId === session.catalogId,
           )
           session.changes = buildImportComparison(current, incoming, undefined, true)
-          session.status = session.changes.some((change) => change.kind === 'conflict')
-            ? 'needs-review'
-            : 'ready'
-          session.updatedAt = new Date().toISOString()
+          refreshImportSessionStatus(session)
         }),
 
       setImportChangeSelected: (sessionId, changeId, selected) =>
@@ -499,18 +530,91 @@ export const useCatalogStore = create<CatalogStore>()(
 
       setMissingResolution: (sessionId, changeId, resolution) =>
         commit((workspace) => {
-          const change = workspace.importSessions
-            .find((item) => item.id === sessionId)
-            ?.changes.find((item) => item.id === changeId)
+          const session = workspace.importSessions.find((item) => item.id === sessionId)
+          const change = session?.changes.find((item) => item.id === changeId)
           if (!change || change.kind !== 'missing') return
           change.missingResolution = resolution
           change.selected = resolution === 'remove'
+          if (session) refreshImportSessionStatus(session)
+        }),
+
+      updateImportChangeIncoming: (sessionId, changeId, patch) =>
+        commit((workspace) => {
+          const session = workspace.importSessions.find((item) => item.id === sessionId)
+          const change = session?.changes.find((item) => item.id === changeId)
+          if (!session || !change?.incoming || change.kind !== 'conflict') return
+          Object.assign(change.incoming, patch, { updatedAt: new Date().toISOString() })
+          change.code = change.incoming.code
+          if (change.productId) {
+            const current = workspace.products.find((product) => product.id === change.productId)
+            if (current) {
+              change.changes = productDifferences(
+                current,
+                change.incoming,
+                session.importedFields,
+                session.source === 'pdf',
+              )
+            }
+          }
+          session.updatedAt = new Date().toISOString()
+        }),
+
+      setConflictResolution: (sessionId, changeId, resolution) =>
+        commit((workspace) => {
+          const session = workspace.importSessions.find((item) => item.id === sessionId)
+          const change = session?.changes.find((item) => item.id === changeId)
+          if (!session || !change || change.kind !== 'conflict') return
+          if (resolution === 'apply-incoming' && !change.productId) return
+
+          if (resolution === 'apply-incoming') {
+            const current = workspace.products.find(
+              (product) => product.id === change.productId,
+            )
+            if (current && change.incoming) {
+              change.changes = productDifferences(
+                current,
+                change.incoming,
+                session.importedFields,
+                session.source === 'pdf',
+              )
+            }
+            const code = normalizeProductCode(change.code)
+            session.changes.forEach((candidate) => {
+              if (
+                candidate.id !== change.id &&
+                candidate.kind === 'conflict' &&
+                (normalizeProductCode(candidate.code) === code ||
+                  candidate.productId === change.productId)
+              ) {
+                candidate.conflictResolution = 'keep-current'
+                candidate.selected = false
+              }
+            })
+          }
+
+          change.conflictResolution = resolution
+          change.selected = resolution === 'apply-incoming' || resolution === 'add-new'
+          refreshImportSessionStatus(session)
         }),
 
       applyImportSession: (sessionId) =>
         commit((workspace) => {
           const session = workspace.importSessions.find((item) => item.id === sessionId)
           if (!session || session.status === 'applied') return
+          const hasPendingDecisions = session.changes.some(
+            (change) =>
+              (change.kind === 'missing' &&
+                (change.missingResolution ?? 'pending') === 'pending') ||
+              (change.kind === 'conflict' &&
+                (change.conflictResolution ?? 'pending') === 'pending'),
+          )
+          if (hasPendingDecisions) return
+
+          const currentProducts = workspace.products.filter(
+            (product) => product.catalogId === session.catalogId,
+          )
+          if (invalidConflictResolutionIds(session.changes, currentProducts).size) return
+
           let applied = 0
 
           session.changes.forEach((change) => {
@@ -521,7 +625,12 @@ export const useCatalogStore = create<CatalogStore>()(
             }
             if (!change.selected || !change.incoming) return
 
-            if (change.kind === 'updated' && change.productId) {
+            if (
+              (change.kind === 'updated' ||
+                (change.kind === 'conflict' &&
+                  change.conflictResolution === 'apply-incoming')) &&
+              change.productId
+            ) {
               const current = workspace.products.find((product) => product.id === change.productId)
               if (!current) return
               change.changes.forEach((fieldChange) => {
@@ -532,7 +641,10 @@ export const useCatalogStore = create<CatalogStore>()(
               })
               current.updatedAt = new Date().toISOString()
               applied += 1
-            } else if (change.kind === 'new') {
+            } else if (
+              change.kind === 'new' ||
+              (change.kind === 'conflict' && change.conflictResolution === 'add-new')
+            ) {
               workspace.products.push({
                 ...structuredClone(change.incoming),
                 id: `product-${crypto.randomUUID()}`,

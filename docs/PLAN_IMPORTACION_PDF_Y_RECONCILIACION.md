@@ -11,9 +11,11 @@ Implementado en el mockup local:
 - sesiones persistentes para Excel y PDF;
 - migración de datos sin pérdida desde el esquema anterior;
 - comparación por código y diferencias seleccionables por campo;
+- resolución manual de conflictos directamente desde la fila comparada;
 - resolución explícita de productos ausentes;
 - edición rápida de precios;
 - diagnóstico, extracción nativa y renderizado de PDF;
+- extracción reforzada por plantilla, puntaje de completitud y listado de campos faltantes;
 - candidatos editables con evidencia, página y confianza;
 - mejora local no destructiva de fotografías e historial creativo;
 - conceptos visuales locales con una interfaz preparada para el futuro adaptador de IA.

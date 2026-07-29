@@ -8,8 +8,10 @@ Mockup funcional para automatizar la creación de catálogos comerciales PDF a p
 - Creación de catálogos y gestión manual de productos y categorías.
 - Centro de importaciones con sesiones persistentes y evidencia de origen.
 - Comparación de Excel/CSV por código estable, con diferencias por campo y aplicación selectiva.
+- Resolución interactiva de conflictos: editar la fila, conservar el actual, usar una alternativa o agregarla con un código nuevo.
 - Bandeja de productos ausentes del Excel sin eliminación automática.
 - Diagnóstico de PDF de InDesign, extracción de texto nativo y candidatos revisables.
+- Reglas específicas para la plantilla oficial, confianza por completitud y señalización de campos no detectados.
 - Modo de edición rápida de precios con variación porcentual.
 - Estudio creativo local para mejorar fotografías sin destruir el original y preparar conceptos visuales.
 - Descarga de una plantilla Excel oficial con hojas `Productos`, `Categorías` y `Catálogo`.

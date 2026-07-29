@@ -19,12 +19,17 @@ import { loadAsset, persistAsset } from '../lib/database'
 import { importProductsFile } from '../lib/excel'
 import { formatCurrency, formatRelativeDate } from '../lib/format'
 import { analyzePdfCatalog, renderPdfPage } from '../lib/pdfImport'
-import { importSummary } from '../lib/reconciliation'
+import {
+  importSummary,
+  invalidConflictResolutionIds,
+  normalizeProductCode,
+} from '../lib/reconciliation'
 import { useParams } from '../lib/router'
 import { useCatalogStore } from '../store/catalogStore'
 import type {
   ImportChange,
   ImportChangeKind,
+  ImportableProductField,
   ImportSession,
   PdfCandidate,
 } from '../types/catalog'
@@ -61,6 +66,18 @@ const fieldLabels: Record<string, string> = {
   featured: 'Destacado',
   order: 'Orden',
 }
+
+const extractionFields: ImportableProductField[] = [
+  'name',
+  'code',
+  'price',
+  'categoryId',
+  'measurements',
+  'material',
+  'packaging',
+  'pack',
+  'master',
+]
 
 function PdfPagePreview({ session, pageNumber }: { session: ImportSession; pageNumber: number }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -102,6 +119,10 @@ function CandidateEditor({
   const categories = workspace.categories.filter(
     (category) => category.catalogId === candidate.product.catalogId,
   )
+  const missingFields = extractionFields.filter((field) => {
+    const value = candidate.product[field]
+    return value === undefined || value === '' || (field === 'price' && value === 0)
+  })
   return (
     <article
       onClick={onActivate}
@@ -122,9 +143,15 @@ function CandidateEditor({
           />
           Página {candidate.pageNumber}
         </label>
-        <Badge tone={candidate.confidence >= 0.8 ? 'success' : candidate.confidence >= 0.6 ? 'warning' : 'danger'}>
-          {Math.round(candidate.confidence * 100)}% confianza
-        </Badge>
+        <div className="flex flex-wrap gap-2">
+          {candidate.extractionMethod === 'template-rule' ? (
+            <Badge tone="primary">Plantilla reconocida</Badge>
+          ) : null}
+          {candidate.reviewed ? <Badge tone="success">Revisado manualmente</Badge> : null}
+          <Badge tone={candidate.confidence >= 0.8 ? 'success' : candidate.confidence >= 0.6 ? 'warning' : 'danger'}>
+            {Math.round(candidate.confidence * 100)}% confianza
+          </Badge>
+        </div>
       </div>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <label className="text-xs font-semibold text-text-secondary">
@@ -214,6 +241,56 @@ function CandidateEditor({
             }
           />
         </label>
+        <label className="text-xs font-semibold text-text-secondary">
+          Embalaje
+          <input
+            className="field-control mt-1"
+            value={candidate.product.packaging}
+            onChange={(event) =>
+              updateCandidate(sessionId, candidate.id, {
+                product: { packaging: event.target.value },
+                reviewed: true,
+              })
+            }
+          />
+        </label>
+        <label className="text-xs font-semibold text-text-secondary">
+          Pack
+          <input
+            className="field-control mt-1"
+            value={candidate.product.pack}
+            onChange={(event) =>
+              updateCandidate(sessionId, candidate.id, {
+                product: { pack: event.target.value },
+                reviewed: true,
+              })
+            }
+          />
+        </label>
+        <label className="text-xs font-semibold text-text-secondary">
+          Master
+          <input
+            className="field-control mt-1"
+            value={candidate.product.master}
+            onChange={(event) =>
+              updateCandidate(sessionId, candidate.id, {
+                product: { master: event.target.value },
+                reviewed: true,
+              })
+            }
+          />
+        </label>
+      </div>
+      <div
+        className={`mt-3 rounded-xl px-3 py-2 text-xs ${
+          missingFields.length
+            ? 'border border-warning/20 bg-warning/5 text-warning-strong'
+            : 'border border-success/20 bg-success/5 text-success-strong'
+        }`}
+      >
+        {missingFields.length
+          ? `Revisar campos no detectados: ${missingFields.map((field) => fieldLabels[field]).join(', ')}.`
+          : 'Los campos comerciales principales fueron detectados.'}
       </div>
       <details className="mt-3 rounded-xl bg-white px-3 py-2 text-xs text-text-secondary ring-1 ring-border">
         <summary className="cursor-pointer font-semibold">Ver texto de evidencia</summary>
@@ -226,18 +303,40 @@ function CandidateEditor({
 function ChangeRow({
   change,
   session,
+  conflictInvalid,
 }: {
   change: ImportChange
   session: ImportSession
+  conflictInvalid: boolean
 }) {
   const workspace = useCatalogStore((state) => state.workspace)
   const setSelected = useCatalogStore((state) => state.setImportChangeSelected)
   const setFieldSelected = useCatalogStore((state) => state.setImportFieldSelected)
   const setMissingResolution = useCatalogStore((state) => state.setMissingResolution)
+  const updateIncoming = useCatalogStore((state) => state.updateImportChangeIncoming)
+  const setConflictResolution = useCatalogStore((state) => state.setConflictResolution)
   const current = change.productId
     ? workspace.products.find((product) => product.id === change.productId)
     : undefined
   const name = change.incoming?.name ?? current?.name ?? 'Producto sin identificar'
+  const conflictCode = normalizeProductCode(change.incoming?.code ?? '')
+  const addNewCodeTaken =
+    change.kind === 'conflict' &&
+    (!conflictCode ||
+      workspace.products.some(
+        (product) =>
+          product.catalogId === session.catalogId &&
+          normalizeProductCode(product.code) === conflictCode,
+      ) ||
+      session.changes.some(
+        (candidate) =>
+          candidate.id !== change.id &&
+          ((candidate.kind === 'conflict' &&
+            (candidate.conflictResolution === 'add-new' ||
+              candidate.conflictResolution === 'apply-incoming')) ||
+            (candidate.kind === 'new' && candidate.selected)) &&
+          normalizeProductCode(candidate.incoming?.code ?? '') === conflictCode,
+      ))
 
   return (
     <article className="rounded-2xl border border-border bg-white p-4">
@@ -315,6 +414,209 @@ function ChangeRow({
           </div>
         </div>
       ) : null}
+      {change.kind === 'conflict' && change.incoming ? (
+        <div className="mt-4 rounded-2xl border border-error/20 bg-error/3 p-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <p className="text-sm font-bold text-text">Resolver conflicto manualmente</p>
+              <p className="mt-1 text-xs leading-5 text-text-secondary">
+                Edita la fila propuesta y decide cómo debe incorporarse. La decisión queda guardada en esta sesión.
+              </p>
+            </div>
+            <Badge
+              tone={
+                (change.conflictResolution ?? 'pending') === 'pending'
+                  ? 'danger'
+                  : 'success'
+              }
+            >
+              {(change.conflictResolution ?? 'pending') === 'pending'
+                ? 'Decisión pendiente'
+                : 'Conflicto resuelto'}
+            </Badge>
+          </div>
+
+          {current ? (
+            <div className="mt-4 rounded-xl border border-border bg-white p-3">
+              <p className="text-[10px] font-bold uppercase tracking-wider text-text-tertiary">
+                Producto actual
+              </p>
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p className="text-sm font-bold text-text">{current.name}</p>
+                  <p className="mt-0.5 font-mono text-xs text-text-tertiary">{current.code}</p>
+                </div>
+                <p className="text-sm font-bold">
+                  {formatCurrency(current.price, current.currency)}
+                </p>
+              </div>
+            </div>
+          ) : null}
+
+          <div className="mt-4">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-text-tertiary">
+              Fila propuesta del Excel
+            </p>
+            <div className="mt-2 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              <label className="text-xs font-semibold text-text-secondary sm:col-span-2">
+                Nombre
+                <input
+                  className="field-control mt-1"
+                  value={change.incoming.name}
+                  onChange={(event) =>
+                    updateIncoming(session.id, change.id, { name: event.target.value })
+                  }
+                />
+              </label>
+              <label className="text-xs font-semibold text-text-secondary">
+                Código
+                <input
+                  className="field-control mt-1 font-mono"
+                  value={change.incoming.code}
+                  onChange={(event) =>
+                    updateIncoming(session.id, change.id, { code: event.target.value })
+                  }
+                />
+              </label>
+              <label className="text-xs font-semibold text-text-secondary">
+                Precio
+                <input
+                  className="field-control mt-1"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={change.incoming.price}
+                  onChange={(event) =>
+                    updateIncoming(session.id, change.id, {
+                      price: Number(event.target.value),
+                    })
+                  }
+                />
+              </label>
+              <label className="text-xs font-semibold text-text-secondary">
+                Categoría
+                <select
+                  className="field-control mt-1"
+                  value={change.incoming.categoryId}
+                  onChange={(event) =>
+                    updateIncoming(session.id, change.id, {
+                      categoryId: event.target.value,
+                    })
+                  }
+                >
+                  {workspace.categories
+                    .filter((category) => category.catalogId === session.catalogId)
+                    .map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.name}
+                      </option>
+                    ))}
+                </select>
+              </label>
+              <label className="text-xs font-semibold text-text-secondary">
+                Medidas
+                <input
+                  className="field-control mt-1"
+                  value={change.incoming.measurements}
+                  onChange={(event) =>
+                    updateIncoming(session.id, change.id, {
+                      measurements: event.target.value,
+                    })
+                  }
+                />
+              </label>
+              <label className="text-xs font-semibold text-text-secondary">
+                Material
+                <input
+                  className="field-control mt-1"
+                  value={change.incoming.material}
+                  onChange={(event) =>
+                    updateIncoming(session.id, change.id, { material: event.target.value })
+                  }
+                />
+              </label>
+              <label className="text-xs font-semibold text-text-secondary">
+                Embalaje
+                <input
+                  className="field-control mt-1"
+                  value={change.incoming.packaging}
+                  onChange={(event) =>
+                    updateIncoming(session.id, change.id, {
+                      packaging: event.target.value,
+                    })
+                  }
+                />
+              </label>
+              <label className="text-xs font-semibold text-text-secondary">
+                Pack
+                <input
+                  className="field-control mt-1"
+                  value={change.incoming.pack}
+                  onChange={(event) =>
+                    updateIncoming(session.id, change.id, { pack: event.target.value })
+                  }
+                />
+              </label>
+              <label className="text-xs font-semibold text-text-secondary">
+                Master
+                <input
+                  className="field-control mt-1"
+                  value={change.incoming.master}
+                  onChange={(event) =>
+                    updateIncoming(session.id, change.id, { master: event.target.value })
+                  }
+                />
+              </label>
+            </div>
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              variant={
+                change.conflictResolution === 'keep-current' ? 'primary' : 'secondary'
+              }
+              onClick={() =>
+                setConflictResolution(session.id, change.id, 'keep-current')
+              }
+            >
+              {current ? 'Conservar producto actual' : 'Ignorar esta fila'}
+            </Button>
+            {current ? (
+              <Button
+                size="sm"
+                variant={
+                  change.conflictResolution === 'apply-incoming'
+                    ? 'primary'
+                    : 'secondary'
+                }
+                onClick={() =>
+                  setConflictResolution(session.id, change.id, 'apply-incoming')
+                }
+              >
+                Usar datos de esta fila
+              </Button>
+            ) : null}
+            <Button
+              size="sm"
+              variant={change.conflictResolution === 'add-new' ? 'primary' : 'secondary'}
+              disabled={Boolean(addNewCodeTaken)}
+              onClick={() => setConflictResolution(session.id, change.id, 'add-new')}
+            >
+              Agregar como producto nuevo
+            </Button>
+          </div>
+          {conflictInvalid ? (
+            <p className="mt-3 text-xs font-medium text-error">
+              El código propuesto colisiona con otro producto o decisión. Modifícalo antes de aplicar.
+            </p>
+          ) : addNewCodeTaken ? (
+            <p className="mt-3 text-xs font-medium text-text-secondary">
+              “Agregar como nuevo” requiere cambiar el código; conservar o actualizar el producto actual sigue disponible.
+            </p>
+          ) : null}
+        </div>
+      ) : null}
       {change.note ? <p className="mt-3 text-xs leading-5 text-text-secondary">{change.note}</p> : null}
     </article>
   )
@@ -356,6 +658,18 @@ export default function CatalogImportsPage() {
     selected?.changes.filter(
       (change) => change.kind === 'missing' && change.missingResolution === 'pending',
     ).length ?? 0
+  const pendingConflicts =
+    selected?.changes.filter(
+      (change) =>
+        change.kind === 'conflict' &&
+        (change.conflictResolution ?? 'pending') === 'pending',
+    ).length ?? 0
+  const invalidConflictIds = selected
+    ? invalidConflictResolutionIds(
+        selected.changes,
+        workspace.products.filter((product) => product.catalogId === catalogId),
+      )
+    : new Set<string>()
   const firstCandidatePage = selected?.pdfCandidates?.[0]?.pageNumber ?? 1
 
   useEffect(() => {
@@ -611,7 +925,7 @@ export default function CatalogImportsPage() {
                           pageNumber={pdfPage}
                         />
                       </div>
-                      <div className="space-y-3">
+                      <div className="max-h-[72vh] space-y-3 overflow-y-auto overscroll-contain pr-2">
                         {selected.pdfCandidates.map((candidate) => (
                           <CandidateEditor
                             key={candidate.id}
@@ -659,7 +973,12 @@ export default function CatalogImportsPage() {
                 </div>
                 <div className="space-y-3 p-5">
                   {visibleChanges.map((change) => (
-                    <ChangeRow key={change.id} change={change} session={selected} />
+                    <ChangeRow
+                      key={change.id}
+                      change={change}
+                      session={selected}
+                      conflictInvalid={invalidConflictIds.has(change.id)}
+                    />
                   ))}
                 </div>
                 <footer className="sticky bottom-0 flex flex-col gap-3 border-t border-border bg-white/95 p-4 backdrop-blur sm:flex-row sm:items-center sm:justify-between">
@@ -668,9 +987,21 @@ export default function CatalogImportsPage() {
                       {selected.changes.filter((change) => change.selected).length} cambios seleccionados
                     </p>
                     <p className="text-xs text-text-tertiary">
-                      {pendingMissing
-                        ? `${pendingMissing} productos fuera del Excel todavía necesitan decisión.`
-                        : 'Todas las ausencias fueron revisadas.'}
+                      {pendingMissing || pendingConflicts || invalidConflictIds.size
+                        ? [
+                            pendingMissing
+                              ? `${pendingMissing} ausencias pendientes`
+                              : '',
+                            pendingConflicts
+                              ? `${pendingConflicts} conflictos pendientes`
+                              : '',
+                            invalidConflictIds.size
+                              ? `${invalidConflictIds.size} decisiones con código inválido`
+                              : '',
+                          ]
+                            .filter(Boolean)
+                            .join(' · ')
+                        : 'Todas las ausencias y conflictos fueron revisados.'}
                     </p>
                   </div>
                   {summary?.updated ? (
@@ -683,7 +1014,12 @@ export default function CatalogImportsPage() {
                   ) : null}
                   <Button
                     icon={<Check className="h-4 w-4" />}
-                    disabled={selected.status === 'applied' || pendingMissing > 0}
+                    disabled={
+                      selected.status === 'applied' ||
+                      pendingMissing > 0 ||
+                      pendingConflicts > 0 ||
+                      invalidConflictIds.size > 0
+                    }
                     onClick={() => applySession(selected.id)}
                   >
                     {selected.status === 'applied' ? 'Cambios aplicados' : 'Aplicar decisiones'}

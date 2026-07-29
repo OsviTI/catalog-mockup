@@ -1,5 +1,11 @@
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
-import type { Category, PdfCandidate, PdfDiagnostics, Product } from '../types/catalog'
+import type {
+  Category,
+  ImportableProductField,
+  PdfCandidate,
+  PdfDiagnostics,
+  Product,
+} from '../types/catalog'
 
 interface TextItemLike {
   str: string
@@ -65,12 +71,35 @@ const codeFromLine = (line: string) => {
   return standaloneCodePattern.test(compact) && /\d/.test(compact) ? compact : ''
 }
 
+const otherFieldPattern =
+  /\s+(?=(?:(?:c[oó]d(?:igo)?|sku|medidas?|capacidad|material|embalaje|pack|master|modelo|colou?r|precio)\b|ud\.?\s*\$))/i
+
+const cleanFieldValue = (value: string) =>
+  value
+    .replace(/^[\s:.-]+/, '')
+    .split(otherFieldPattern)[0]
+    ?.trim() ?? ''
+
 const valueForLabel = (lines: string[], index: number, label: RegExp) => {
-  for (let offset = -4; offset <= 5; offset += 1) {
+  const offsets = [
+    ...Array.from({ length: 13 }, (_, offset) => offset),
+    ...Array.from({ length: 5 }, (_, offset) => -(offset + 1)),
+  ]
+  for (const offset of offsets) {
     const line = lines[index + offset]
     if (!line) continue
     const match = line.match(label)
-    if (match?.[1]) return match[1].trim()
+    if (!match || match.index === undefined) continue
+
+    const before = cleanFieldValue(line.slice(0, match.index))
+    const after = cleanFieldValue(line.slice(match.index + match[0].length))
+    if (before) return before
+    if (after) return after
+
+    const previous = cleanFieldValue(lines[index + offset - 1] ?? '')
+    if (previous && !ignoredNamePattern.test(previous)) return previous
+    const next = cleanFieldValue(lines[index + offset + 1] ?? '')
+    if (next && !ignoredNamePattern.test(next)) return next
   }
   return ''
 }
@@ -109,7 +138,7 @@ const productFromCode = (
   code: string,
   order: number,
 ): Product => {
-  const nearby = lines.slice(Math.max(0, codeIndex - 5), codeIndex + 7)
+  const nearby = lines.slice(Math.max(0, codeIndex - 4), codeIndex + 13)
   const priceMatch = nearby.map((line) => line.match(currencyPattern)).find(Boolean)
   const name = inferName(lines, codeIndex) || `Producto ${code}`
   const now = new Date().toISOString()
@@ -122,19 +151,54 @@ const productFromCode = (
     code,
     price: priceMatch?.[1] ? parsePrice(priceMatch[1]) : 0,
     currency: 'ARS',
-    measurements: valueForLabel(lines, codeIndex, /medidas?\s*[:.]?\s*(.+)/i),
-    capacity: valueForLabel(lines, codeIndex, /capacidad\s*[:.]?\s*(.+)/i) || undefined,
-    material: valueForLabel(lines, codeIndex, /material\s*[:.]?\s*(.+)/i),
-    packaging: valueForLabel(lines, codeIndex, /(?:embalaje|caja)\s*[:.]?\s*(.+)/i),
-    pack: valueForLabel(lines, codeIndex, /pack\s*[:.]?\s*(.+)/i),
-    master: valueForLabel(lines, codeIndex, /master\s*[:.]?\s*(.+)/i),
-    model: valueForLabel(lines, codeIndex, /modelo\s*[:.]?\s*(.+)/i) || undefined,
-    color: valueForLabel(lines, codeIndex, /colou?r\s*[:.]?\s*(.+)/i) || undefined,
+    measurements: valueForLabel(lines, codeIndex, /medidas?/i),
+    capacity: valueForLabel(lines, codeIndex, /capacidad/i) || undefined,
+    material: valueForLabel(lines, codeIndex, /material/i),
+    packaging: valueForLabel(lines, codeIndex, /embalaje/i),
+    pack: valueForLabel(lines, codeIndex, /pack/i),
+    master: valueForLabel(lines, codeIndex, /master/i),
+    model: valueForLabel(lines, codeIndex, /modelo/i) || undefined,
+    color: valueForLabel(lines, codeIndex, /colou?r/i) || undefined,
     image: {},
     featured: false,
     order,
     createdAt: now,
     updatedAt: now,
+  }
+}
+
+const assessCandidate = (product: Product, templateRule: boolean) => {
+  const checks: Array<{
+    field: ImportableProductField
+    weight: number
+    present: boolean
+  }> = [
+    {
+      field: 'name',
+      weight: 0.17,
+      present: Boolean(product.name && !product.name.startsWith('Producto ')),
+    },
+    { field: 'code', weight: 0.18, present: Boolean(product.code) },
+    { field: 'price', weight: 0.17, present: product.price > 0 },
+    { field: 'measurements', weight: 0.1, present: Boolean(product.measurements) },
+    { field: 'material', weight: 0.1, present: Boolean(product.material) },
+    { field: 'packaging', weight: 0.08, present: Boolean(product.packaging) },
+    { field: 'pack', weight: 0.08, present: Boolean(product.pack) },
+    { field: 'master', weight: 0.08, present: Boolean(product.master) },
+    { field: 'categoryId', weight: 0.04, present: Boolean(product.categoryId) },
+  ]
+  const missingFields = checks.filter((check) => !check.present).map((check) => check.field)
+  const completeness = checks.reduce(
+    (total, check) => total + (check.present ? check.weight : 0),
+    0,
+  )
+
+  return {
+    confidence: Math.min(templateRule ? 0.98 : 0.86, completeness),
+    missingFields,
+    extractionMethod: templateRule
+      ? ('template-rule' as const)
+      : ('native-generic' as const),
   }
 }
 
@@ -163,6 +227,10 @@ export const analyzePdfCatalog = async (
       }))
     const lines = toLines(items)
     const normalizedPage = normalizeText(lines.join(' '))
+    const templateRule =
+      ['medidas', 'material', 'embalaje', 'pack', 'master'].filter((label) =>
+        normalizedPage.includes(label),
+      ).length >= 4
     const detectedCategory = categories.find((category) =>
       normalizedPage.includes(normalizeText(category.name)),
     )
@@ -184,21 +252,19 @@ export const analyzePdfCatalog = async (
         code,
         candidates.length + 1,
       )
-      const confidence =
-        0.45 +
-        (product.name.startsWith('Producto ') ? 0 : 0.2) +
-        (product.price > 0 ? 0.2 : 0) +
-        (product.material || product.measurements ? 0.1 : 0)
+      const assessment = assessCandidate(product, templateRule)
       candidates.push({
         id: `candidate-${crypto.randomUUID()}`,
         pageNumber,
-        confidence: Math.min(0.95, confidence),
+        confidence: assessment.confidence,
         originalText: lines
-          .slice(Math.max(0, codeIndex - 4), codeIndex + 7)
+          .slice(Math.max(0, codeIndex - 5), codeIndex + 13)
           .join('\n'),
         product,
         selected: true,
         reviewed: false,
+        extractionMethod: assessment.extractionMethod,
+        missingFields: assessment.missingFields,
       })
     })
 

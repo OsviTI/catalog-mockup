@@ -6,6 +6,7 @@ export type ImportSource = 'excel' | 'pdf'
 export type ImportStatus = 'analyzing' | 'needs-review' | 'ready' | 'applied' | 'failed'
 export type ImportChangeKind = 'unchanged' | 'updated' | 'new' | 'missing' | 'conflict'
 export type MissingResolution = 'pending' | 'keep' | 'remove'
+export type ConflictResolution = 'pending' | 'keep-current' | 'apply-incoming' | 'add-new'
 export type ImportableProductField =
   | 'name'
   | 'code'
@@ -150,6 +151,8 @@ export interface PdfCandidate {
   product: Product
   selected: boolean
   reviewed: boolean
+  extractionMethod?: 'template-rule' | 'native-generic'
+  missingFields?: ImportableProductField[]
 }
 
 export interface PdfDiagnostics {
@@ -174,6 +177,7 @@ export interface ImportChange {
   changes: ProductFieldChange[]
   selected: boolean
   missingResolution?: MissingResolution
+  conflictResolution?: ConflictResolution
   note?: string
 }
 
@@ -187,6 +191,7 @@ export interface ImportSession {
   createdAt: string
   updatedAt: string
   warnings: string[]
+  importedFields?: ImportableProductField[]
   changes: ImportChange[]
   pdfDiagnostics?: PdfDiagnostics
   pdfCandidates?: PdfCandidate[]

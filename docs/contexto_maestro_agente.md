@@ -66,9 +66,11 @@ El mockup incluye:
 - importación Excel no destructiva mediante sesiones persistentes;
 - comparación por código en estados sin cambios, actualizado, nuevo, ausente y conflicto;
 - aprobación individual por producto y por campo;
+- resolución editable de conflictos con acciones para conservar, reemplazar, ignorar o agregar;
 - bandeja obligatoria de decisión para productos ausentes;
 - diagnóstico de PDF digital, mixto o escaneado mediante PDF.js;
 - extracción nativa de candidatos con página, evidencia y confianza;
+- confianza calculada por completitud, reglas específicas de la plantilla oficial y campos faltantes visibles;
 - revisión lado a lado con la página original renderizada;
 - edición rápida de precios y operaciones porcentuales;
 - estudio creativo con mejora local no destructiva de fotografías;
