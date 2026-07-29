@@ -97,10 +97,11 @@ export default function DashboardPage() {
           </p>
         </div>
         <Button
+          variant="secondary"
           size="lg"
           icon={<Plus className="h-4 w-4" />}
           onClick={() => setCreateOpen(true)}
-          className="relative z-10 mt-6 bg-white text-slate-950 shadow-xl hover:bg-slate-100 lg:mt-0"
+          className="relative z-10 mt-6 border-white/20 shadow-xl lg:mt-0"
         >
           Nuevo catálogo
         </Button>
