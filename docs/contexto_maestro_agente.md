@@ -1,185 +1,146 @@
-# Contexto maestro del proyecto: sistema de automatización de catálogos PDF
+# Contexto maestro: automatización de catálogos PDF
 
-## Propósito de este documento
+## Función de este documento
 
-Este documento sirve como fuente única de contexto para cualquier agente de IA que participe en la formulación, análisis, diseño funcional, UX/UI, mockup o arquitectura técnica del proyecto. Su objetivo es evitar pérdida de contexto, alucinaciones, cambios arbitrarios de alcance y desviaciones respecto al problema real del cliente. [file:31][file:42][file:43]
+Esta es la fuente oficial y viva del proyecto. Debe leerse antes de proponer alcance, UX, arquitectura o implementación. Las decisiones confirmadas prevalecen sobre documentos anteriores. Los documentos `CONTEXT.md`, `contexto_maestro_ide.md` y `prompt_mockup_catalogos (1).md` se conservan como antecedentes, no como autoridad.
 
-Debe usarse como referencia viva durante todo el proyecto. Cada vez que se avance una fase, este documento debe actualizarse con decisiones tomadas, supuestos validados, cambios aprobados y elementos descartados. [file:43]
+Última actualización: 28 de julio de 2026.
 
-## Estado actual del proyecto
+## Problema y objetivo
 
-El cliente crea catálogos comerciales en formato PDF a partir de tablas de Excel y maquetación manual en Adobe InDesign. El problema principal es que los precios cambian con frecuencia, lo que obliga a rehacer o corregir repetidamente los catálogos, generando retrasos, errores y dependencia de perfiles que conocen InDesign. [file:31][file:42]
+Crystal Rock mantiene datos de producto en planillas y maqueta catálogos manualmente en Adobe InDesign. Los cambios frecuentes de precios, productos e imágenes obligan a repetir tareas editoriales, aumentan los errores y hacen depender el proceso de una herramienta especializada.
 
-La solución buscada es un sistema web que permita automatizar la creación, actualización, previsualización, versionado y descarga de catálogos PDF, partiendo de datos estructurados y una lógica editorial reutilizable. [file:42][file:43]
+El objetivo es reemplazar ese proceso recurrente por un sistema web que permita:
 
-## Problema central
+1. centralizar y editar productos;
+2. importar datos estructurados;
+3. validar inconsistencias antes de diseñar;
+4. aplicar plantillas editoriales reutilizables;
+5. previsualizar el documento;
+6. generar PDF digital A4;
+7. conservar versiones históricas;
+8. actualizar un catálogo sin volver a maquetarlo.
 
-El flujo actual depende de un proceso manual y fragmentado: datos en Excel, maquetación en InDesign, correcciones manuales y exportación final a PDF. Cuando cambian precios, productos o imágenes, se deben hacer ajustes manuales documento por documento, lo que no escala y aumenta el riesgo de inconsistencias. [file:31][file:42]
+El producto no es un e-commerce. El sitio de Crystal Rock sirve como referencia del modelo de datos, categorías y productos, no como alcance funcional que deba replicarse.
 
-## Objetivo principal del sistema
+## Material de referencia confirmado
 
-Automatizar el proceso completo de creación, actualización, previsualización, versionado y descarga de catálogos comerciales en PDF, reduciendo tiempos operativos y eliminando la necesidad de edición manual recurrente en InDesign. [file:43]
+- `V2_CR_MVP.pdf`: pese al nombre, contiene el catálogo editorial de ocho páginas.
+- `Final_Secundario.pdf`: pese al nombre, contiene la tabla semejante a Excel.
+- Sitio de productos: `https://crystalrock.com.ar/products?groupId=4`.
 
-## Objetivos específicos
+El material evidencia campos como nombre, código, precio, medidas, capacidad, material, embalaje, pack, master, modelo, color e imagen. También muestra categorías, productos destacados e imágenes ambientales asociadas a una sección.
 
-- Centralizar la gestión de datos de producto en una sola plataforma. [file:43]
-- Permitir carga de datos desde Excel o fuente estructurada. [file:31][file:43]
-- Convertir esos datos en catálogos PDF con estructura editorial consistente. [file:42][file:43]
-- Permitir previsualización antes de exportar. [file:43]
-- Registrar versiones históricas por cada generación. [file:43]
-- Facilitar actualizaciones rápidas cuando cambian precios o productos. [file:31][file:43]
+## Decisiones aprobadas
 
-## Fuentes reales analizadas
+- El entregable actual debe sentirse como un sistema completo, dinámico y presentable, aunque utilice datos demostrativos.
+- La intención futura es eliminar por completo la dependencia recurrente de InDesign.
+- La salida prioritaria es PDF digital A4.
+- Deben existir varias plantillas editoriales.
+- La configuración visual puede modificarse, pero mediante controles acotados que conserven coherencia y legibilidad; no se requiere un editor libre de escritorio.
+- Productos, códigos, precios, datos técnicos, imágenes y categorías pueden agregarse, editarse o eliminarse.
+- Cada categoría puede tener una imagen ambiental propia.
+- La entrada inicial será una plantilla Excel estable; una API queda prevista como evolución.
+- Los roles y permisos quedan fuera de esta etapa porque el cliente todavía no los definió.
+- Los cambios deben sobrevivir a recargas y poder conservarse para futuras presentaciones.
+- Las versiones anteriores no se sobrescriben. Restaurar una versión crea el nuevo estado de borrador y conserva el historial.
+- El formato de importación recomendado tiene tres hojas: `Productos`, `Categorías` y `Catálogo`.
 
-### Tabla de productos
+## Estado funcional implementado
 
-Se analizó una tabla con campos como:
+El mockup incluye:
 
-- Nombre producto
-- Medidas
-- Material
-- Embalaje
-- Pack
-- Master
-- Código
-- Precio
-- Imagen [file:31]
+- dashboard con estadísticas, búsqueda, filtros y actividad;
+- alta, duplicación y eliminación protegida de catálogos;
+- gestión de productos y categorías;
+- edición de todos los campos comerciales y técnicos relevantes;
+- carga local de imágenes de producto y ambientales;
+- importación de XLSX, XLS y CSV;
+- normalización flexible de encabezados;
+- validación de campos obligatorios, códigos duplicados e imágenes faltantes;
+- descarga de plantilla Excel y exportación de datos actuales;
+- tres plantillas: Editorial Rojo, Minimal Arena y Nocturna Premium;
+- variantes de portada, densidades de 2, 4 o 6 productos por página, contenido visible y paleta;
+- vista previa compartida con el motor de exportación;
+- generación PDF digital A4;
+- snapshot automático al descargar el PDF;
+- historial, publicación y restauración de versiones;
+- guardado automático local;
+- copia portable de datos e imágenes;
+- interfaz adaptable a escritorio, tablet y móvil.
 
-Ejemplos de productos encontrados:
+## Modelo editorial implementado
 
-- Copas Gin Tonic 590 ML
-- Copas Degustación 465 ML
-- Copas Degustación 435 ML
-- Copas Degustación Premium 615 ML
-- Sacacorcho a pilas
-- Sacacorcho por aire
-- Sacacorcho doble aleta [file:31]
+El documento se compone automáticamente:
 
-### Catálogo PDF actual
+1. portada;
+2. por cada categoría con productos:
+   - página de producto destacado;
+   - páginas de grilla según la densidad elegida;
+3. cierre comercial.
 
-El catálogo actual tiene una estructura editorial repetible con:
+El producto marcado como destacado se utiliza en la apertura de su categoría. Si ninguno está marcado, se usa el primero según el orden editorial.
 
-- portada promocional,
-- bloques de marca,
-- categorías,
-- productos destacados,
-- fichas de producto,
-- cierre comercial. [file:42]
+## Persistencia y versionado
 
-También se observó una lógica visual sobria, comercial y editorial, con fuerte jerarquía en nombre de producto, datos técnicos y precio. [file:42]
+Esta etapa no utiliza backend. El espacio completo se guarda en IndexedDB:
 
-### Sitio de referencia
+- el estado contiene catálogos, categorías, productos, plantillas, versiones y actividad;
+- las imágenes se almacenan como objetos binarios `Blob`;
+- el guardado se ejecuta automáticamente después de cada modificación;
+- se solicita almacenamiento persistente al navegador cuando está disponible;
+- una copia portable JSON permite trasladar todo el espacio, incluidas las imágenes.
 
-Se identificó que el sitio asociado funciona como catálogo comercial con páginas de productos y categorías, lo que refuerza la necesidad de una solución basada en datos estructurados, categorías y generación consistente de contenido. [web:33][web:35][web:38]
+La descarga PDF crea una versión inmutable. Una versión publicada es una marca de aprobación dentro del mockup. Restaurar una versión nunca elimina las posteriores.
 
-## Hechos confirmados
+Esta estrategia es adecuada para una demostración durable, pero una solución multiusuario real requerirá backend, almacenamiento de objetos, autenticación, permisos, auditoría y copias de seguridad administradas.
 
-1. El cliente usa actualmente Excel y Adobe InDesign para generar catálogos. [file:31][file:42]
-2. Los precios cambian con frecuencia y las actualizaciones manuales consumen mucho tiempo. [file:31][file:42]
-3. El catálogo actual tiene estructura editorial repetible. [file:42]
-4. El resultado final deseado del sistema es generar y descargar catálogos PDF. [file:42][file:43]
-5. El sistema debe contemplar previsualización y versionado. [file:43]
+## Arquitectura y librerías aprobadas
 
-## Supuestos de trabajo vigentes
+- React + TypeScript para interfaz y modelo tipado.
+- Vite para desarrollo y build.
+- Tailwind CSS para el sistema visual.
+- Zustand para estado y acciones de dominio.
+- IndexedDB mediante `idb` para persistencia y archivos.
+- Zod para validación.
+- `read-excel-file` y `write-excel-file` para entrada y salida de planillas.
+- jsPDF y html2canvas para generar el PDF en el navegador.
+- Router hash local y tipado para portabilidad en hosting estático sin sumar una dependencia innecesaria.
+- Lucide React para iconos accesibles y consistentes.
 
-Estos supuestos pueden usarse temporalmente, pero deben marcarse siempre como no confirmados hasta validarlos con el cliente.
+Excel y PDF se cargan de forma diferida para mantener liviana la carga inicial.
 
-1. El sistema inicialmente se alimentará con Excel/CSV, no con integración API completa. [file:43]
-2. El MVP tendrá una plantilla principal configurable, no un editor libre drag-and-drop. [file:43]
-3. Las imágenes ya existen y podrán relacionarse con productos mediante nombre, código, ruta o URL. [file:31][file:43]
-4. El usuario principal del MVP será un operador/editor no técnico. [file:43]
-5. La primera versión priorizará PDF digital sobre salida de imprenta avanzada. [file:43]
-6. La estructura del catálogo cambiará poco entre ediciones. [file:42][file:43]
+## Fuera de alcance actual
 
-## Alcance funcional aprobado hasta ahora
+- autenticación, usuarios, roles y permisos;
+- backend o base de datos compartida;
+- integración real con ERP, CRM, e-commerce o API;
+- colaboración simultánea;
+- publicación web como e-commerce;
+- editor libre drag-and-drop;
+- preprensa profesional CMYK, sangrados o marcas de corte;
+- multilenguaje y analítica avanzada.
 
-El MVP debe incluir como mínimo:
+## Pendientes de validación con el cliente
 
-- Login o acceso controlado. [file:43]
-- Dashboard con listado de catálogos. [file:43]
-- Creación de nuevo catálogo. [file:43]
-- Carga de archivo Excel/CSV. [file:43]
-- Validación y revisión de datos. [file:43]
-- Selección/configuración de plantilla. [file:43]
-- Generación automática del catálogo. [file:43]
-- Previsualización del PDF. [file:43]
-- Versionado automático. [file:43]
-- Descarga del PDF. [file:43]
-- Historial de versiones. [file:43]
-- Actualización de catálogos existentes. [file:43]
+- Reglas exactas de cada campo y cuáles son obligatorios.
+- Significado definitivo de productos o filas que parecen alternativas.
+- Reglas de precios, impuestos, moneda, descuentos y vigencias.
+- Convención final para asociar imágenes masivamente por código o nombre.
+- Flujo real de revisión/aprobación y futuros roles.
+- Si la salida final necesita requisitos de imprenta además del PDF digital.
+- Contrato y periodicidad de una futura integración API.
 
-## Fuera del MVP por ahora
+## Reglas de continuidad
 
-- Integración con ERP/CRM por API. [file:43]
-- Editor visual drag-and-drop complejo. [file:43]
-- Catálogos multilingües. [file:43]
-- Publicación web del catálogo como producto principal. [file:43]
-- Analítica avanzada. [file:43]
-- Múltiples plantillas complejas por catálogo. [file:43]
+- No convertir el proyecto en e-commerce.
+- Separar hechos confirmados de supuestos.
+- No introducir campos obligatorios que la fuente real no justifique.
+- Mantener la generación de catálogos como núcleo.
+- Reutilizar el mismo componente editorial para vista previa, versión histórica y PDF.
+- Proteger acciones destructivas y conservar las versiones.
+- Actualizar este documento cuando una decisión pendiente sea confirmada.
 
-## Flujo funcional base aprobado
+## Próxima fase recomendada
 
-El flujo funcional definido hasta ahora es:
-
-1. Ingreso al sistema. [file:43]
-2. Dashboard con listado de catálogos. [file:43]
-3. Creación de un nuevo catálogo. [file:43]
-4. Carga de archivo Excel o fuente estructurada. [file:43]
-5. Validación y normalización de datos. [file:43]
-6. Selección o configuración de plantilla. [file:43]
-7. Generación automática del catálogo. [file:43]
-8. Previsualización del PDF. [file:43]
-9. Versionado automático. [file:43]
-10. Descarga del PDF. [file:43]
-11. Revisión de historial de versiones. [file:43]
-12. Actualización de catálogo existente al cambiar precios. [file:43]
-
-## Reglas para cualquier agente que continúe este proyecto
-
-Estas reglas son obligatorias:
-
-- No inventar información no confirmada.
-- Separar siempre hechos confirmados de supuestos.
-- No cambiar el objetivo del proyecto: el sistema está orientado a automatizar catálogos PDF, no a convertirse en e-commerce. [file:43]
-- No desviar el foco hacia modelo SaaS o monetización si no se pide explícitamente. [file:43]
-- Mantener el foco en MVP antes de proponer fases más complejas. [file:43]
-- Toda recomendación funcional o técnica debe justificarse.
-- Toda propuesta visual debe respetar la lógica editorial del catálogo actual. [file:42]
-- Si un dato no está claro, convertirlo en pregunta para validar con el cliente.
-
-## Instrucciones para continuidad de trabajo
-
-Cada vez que se retome el proyecto, el agente debe:
-
-1. Leer este documento completo.
-2. Resumir en 5 a 10 puntos qué entendió del estado actual.
-3. Confirmar qué hechos usa como base y qué supuestos mantiene abiertos.
-4. Explicar en qué fase del proyecto está trabajando: formulación, arquitectura funcional, flujos, pantallas, UI o stack técnico.
-5. Continuar solo sobre la base ya aprobada, sin redefinir desde cero lo que ya fue acordado.
-
-## Plantilla de actualización del contexto
-
-Usar esta sección para ir enriqueciendo el documento con cada avance.
-
-### Decisiones aprobadas
-
-- El objetivo final incluye generación, previsualización, versionado y descarga de PDF. [file:43]
-- El MVP se enfocará en carga de datos, plantilla, generación y control de versiones. [file:43]
-
-### Supuestos pendientes de validar
-
-- Si habrá login real o acceso por intranet. [file:43]
-- Si el cliente necesita salida de imprenta avanzada. [file:43]
-- Si habrá aprobación interna antes de publicar o descargar. [file:43]
-- Si existirán múltiples plantillas o solo una plantilla base. [file:43]
-- Si las imágenes se subirán al sistema o se referenciarán desde rutas/URLs. [file:43]
-
-### Cambios rechazados
-
-- Convertir el sistema en un e-commerce completo.
-- Agregar módulos no esenciales al MVP sin validación previa.
-- Introducir campos como obligatorios sin confirmación del cliente cuando no existan en la data real. [file:31]
-
-### Próxima fase sugerida
-
-Diseño de arquitectura de pantallas y estructura del mockup, a partir del flujo funcional ya definido. [file:43]
+Validar el mockup con el cliente usando una planilla real completa y una carpeta real de imágenes. Con esa sesión deben cerrarse el contrato de datos, las reglas de precio, la asociación masiva de imágenes y el flujo de aprobación. Después podrá diseñarse la arquitectura de producción con backend y API.

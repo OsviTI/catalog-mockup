@@ -1,79 +1,87 @@
-import { BrowserRouter, Routes, Route, NavLink } from 'react-router-dom'
+import { FileQuestion } from 'lucide-react'
+import { useEffect } from 'react'
+import CatalogWorkspaceLayout from './components/catalog/CatalogWorkspaceLayout'
+import AppShell from './components/layout/AppShell'
+import LoadingScreen from './components/layout/LoadingScreen'
+import EmptyState from './components/ui/EmptyState'
+import { Link, RouterProvider, useRouter } from './lib/router'
+import CatalogDataPage from './pages/CatalogDataPage'
+import CatalogPreviewPage from './pages/CatalogPreviewPage'
+import CatalogTemplatePage from './pages/CatalogTemplatePage'
+import CatalogVersionsPage from './pages/CatalogVersionsPage'
 import DashboardPage from './pages/DashboardPage'
-import ConfigPage from './pages/ConfigPage'
-import PreviewPage from './pages/PreviewPage'
-import CatalogDetailPage from './pages/CatalogDetailPage'
+import SettingsPage from './pages/SettingsPage'
+import TemplatesPage from './pages/TemplatesPage'
+import { useCatalogStore } from './store/catalogStore'
 
-function App() {
+function NotFoundPage() {
   return (
-    <BrowserRouter>
-      <div className="min-h-screen bg-bg text-text">
-        <header className="border-b border-border bg-white/90 backdrop-blur">
-          <div className="mx-auto flex max-w-7xl flex-col gap-4 px-6 py-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.3em] text-primary">
-                Catalog Mockup
-              </p>
-              <h1 className="text-xl font-semibold text-text">
-                Automatización de catálogos PDF
-              </h1>
-            </div>
-            <nav className="flex flex-wrap gap-2 rounded-full border border-border bg-bg p-1">
-              <NavLink
-                to="/"
-                className={({ isActive }) =>
-                  `rounded-full px-4 py-2 text-sm font-medium transition ${
-                    isActive ? 'bg-primary text-white shadow' : 'text-text-secondary hover:bg-white'
-                  }`
-                }
-              >
-                Dashboard
-              </NavLink>
-              <NavLink
-                to="/configuracion"
-                className={({ isActive }) =>
-                  `rounded-full px-4 py-2 text-sm font-medium transition ${
-                    isActive ? 'bg-primary text-white shadow' : 'text-text-secondary hover:bg-white'
-                  }`
-                }
-              >
-                Configuración
-              </NavLink>
-              <NavLink
-                to="/preview"
-                className={({ isActive }) =>
-                  `rounded-full px-4 py-2 text-sm font-medium transition ${
-                    isActive ? 'bg-primary text-white shadow' : 'text-text-secondary hover:bg-white'
-                  }`
-                }
-              >
-                Previsualización
-              </NavLink>
-              <NavLink
-                to="/detalle"
-                className={({ isActive }) =>
-                  `rounded-full px-4 py-2 text-sm font-medium transition ${
-                    isActive ? 'bg-primary text-white shadow' : 'text-text-secondary hover:bg-white'
-                  }`
-                }
-              >
-                Detalle
-              </NavLink>
-            </nav>
-          </div>
-        </header>
-
-        <main className="mx-auto max-w-7xl px-6 py-8">
-          <Routes>
-            <Route path="/" element={<DashboardPage />} />
-            <Route path="/configuracion" element={<ConfigPage />} />
-            <Route path="/preview" element={<PreviewPage />} />
-            <Route path="/detalle/:catalogId" element={<CatalogDetailPage />} />
-          </Routes>
-        </main>
-      </div>
-    </BrowserRouter>
+    <EmptyState
+      icon={FileQuestion}
+      title="Esta página no existe"
+      description="Revisa el enlace o regresa al dashboard para continuar."
+      action={
+        <Link to="/" className="font-bold text-primary">
+          Volver al dashboard
+        </Link>
+      }
+    />
   )
 }
 
-export default App
+function Application() {
+  const hydrated = useCatalogStore((state) => state.hydrated)
+  const hydrate = useCatalogStore((state) => state.hydrate)
+  const { path, navigate } = useRouter()
+
+  useEffect(() => {
+    void hydrate()
+  }, [hydrate])
+
+  useEffect(() => {
+    const catalogRoot = path.match(/^\/catalogos\/([^/]+)\/?$/)
+    if (catalogRoot) navigate(`/catalogos/${catalogRoot[1]}/datos`, { replace: true })
+  }, [navigate, path])
+
+  if (!hydrated) return <LoadingScreen />
+
+  let page
+  if (path === '/') page = <DashboardPage />
+  else if (path === '/plantillas') page = <TemplatesPage />
+  else if (path === '/configuracion') page = <SettingsPage />
+  else {
+    const catalogRoute = path.match(
+      /^\/catalogos\/([^/]+)\/(datos|plantilla|preview|versiones)\/?$/,
+    )
+    if (catalogRoute) {
+      const section = catalogRoute[2]
+      const content =
+        section === 'datos' ? (
+          <CatalogDataPage />
+        ) : section === 'plantilla' ? (
+          <CatalogTemplatePage />
+        ) : section === 'preview' ? (
+          <CatalogPreviewPage />
+        ) : (
+          <CatalogVersionsPage />
+        )
+      page = <CatalogWorkspaceLayout>{content}</CatalogWorkspaceLayout>
+    } else {
+      page = <NotFoundPage />
+    }
+  }
+
+  return (
+    <AppShell>
+      {page}
+    </AppShell>
+  )
+}
+
+export default function App() {
+  return (
+    <RouterProvider>
+      <Application />
+    </RouterProvider>
+  )
+}

@@ -1,51 +1,75 @@
+import { useState } from 'react'
+import { useNavigate } from '../../lib/router'
+import { InputField, TextareaField } from '../ui/FormField'
+import Button from '../ui/Button'
+import Modal from '../ui/Modal'
+import { useCatalogStore } from '../../store/catalogStore'
+
 interface CreateCatalogModalProps {
   open: boolean
   onClose: () => void
 }
 
 export default function CreateCatalogModal({ open, onClose }: CreateCatalogModalProps) {
-  if (!open) return null
+  const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
+  const createCatalog = useCatalogStore((state) => state.createCatalog)
+  const updateCatalog = useCatalogStore((state) => state.updateCatalog)
+  const navigate = useNavigate()
+
+  const handleCreate = () => {
+    const cleanName = name.trim()
+    if (!cleanName) return
+    const catalogId = createCatalog(cleanName)
+    if (description.trim()) updateCatalog(catalogId, { description: description.trim() })
+    setName('')
+    setDescription('')
+    onClose()
+    navigate(`/catalogos/${catalogId}/datos`)
+  }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-      <div className="w-full max-w-lg rounded-3xl border border-border bg-white p-6 shadow-2xl">
-        <div className="flex items-start justify-between">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.3em] text-primary">Nuevo catálogo</p>
-            <h3 className="mt-2 text-xl font-semibold text-text">Crear catálogo desde datos</h3>
-          </div>
-          <button onClick={onClose} className="rounded-full border border-border px-3 py-1 text-sm text-text-secondary">
-            Cerrar
-          </button>
-        </div>
-
-        <div className="mt-6 space-y-4">
-          <div>
-            <label className="text-sm font-medium text-text">Nombre del catálogo</label>
-            <input className="mt-2 w-full rounded-2xl border border-border bg-bg px-4 py-3 text-sm outline-none" placeholder="Ej. Colección Otoño 2026" />
-          </div>
-          <div>
-            <label className="text-sm font-medium text-text">Fuente de datos</label>
-            <select className="mt-2 w-full rounded-2xl border border-border bg-bg px-4 py-3 text-sm outline-none">
-              <option>Excel / CSV</option>
-              <option>Datos mock</option>
-            </select>
-          </div>
-          <div>
-            <label className="text-sm font-medium text-text">Observaciones</label>
-            <textarea className="mt-2 min-h-[90px] w-full rounded-2xl border border-border bg-bg px-4 py-3 text-sm outline-none" placeholder="Ajustes de edición, promociones o campañas" />
-          </div>
-        </div>
-
-        <div className="mt-6 flex justify-end gap-3">
-          <button onClick={onClose} className="rounded-full border border-border px-4 py-2 text-sm text-text-secondary">
+    <Modal
+      open={open}
+      onClose={onClose}
+      title="Crear nuevo catálogo"
+      description="Comienza con una estructura lista para importar productos y aplicar una plantilla."
+      footer={
+        <>
+          <Button variant="ghost" onClick={onClose}>
             Cancelar
-          </button>
-          <button className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-hover">
-            Crear catálogo
-          </button>
+          </Button>
+          <Button onClick={handleCreate} disabled={!name.trim()}>
+            Crear y configurar
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-5">
+        <InputField
+          label="Nombre del catálogo"
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          placeholder="Ej. Colección Invierno 2026"
+          autoFocus
+        />
+        <TextareaField
+          label="Descripción"
+          hint="Opcional"
+          value={description}
+          onChange={(event) => setDescription(event.target.value)}
+          placeholder="Objetivo, campaña o notas internas del catálogo."
+        />
+        <div className="rounded-2xl border border-primary/15 bg-primary/5 p-4">
+          <p className="text-sm font-semibold text-primary">El sistema preparará automáticamente</p>
+          <ul className="mt-2 grid gap-2 text-sm text-text-secondary sm:grid-cols-2">
+            <li>• Borrador persistente</li>
+            <li>• Categoría inicial</li>
+            <li>• Plantilla editorial</li>
+            <li>• Validación de productos</li>
+          </ul>
         </div>
       </div>
-    </div>
+    </Modal>
   )
 }
