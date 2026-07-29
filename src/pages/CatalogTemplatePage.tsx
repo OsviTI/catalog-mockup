@@ -179,7 +179,12 @@ export default function CatalogTemplatePage() {
                   </div>
                   <div className="mt-3">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-bold text-text">{item.name}</span>
+                      <span className="flex min-w-0 flex-wrap items-center gap-2 text-sm font-bold text-text">
+                        {item.name}
+                        {item.origin === 'client' ? (
+                          <Badge tone="success">Oficial del cliente</Badge>
+                        ) : null}
+                      </span>
                       {item.id === template.id ? <Badge tone="primary">Activa</Badge> : null}
                     </div>
                     <p className="mt-1 text-xs leading-5 text-text-secondary">{item.description}</p>
@@ -206,6 +211,16 @@ export default function CatalogTemplatePage() {
                   ))}
                 </div>
               </div>
+              {template.origin === 'client' ? (
+                <div className="rounded-2xl border border-success/20 bg-success/5 p-4">
+                  <p className="text-xs font-bold text-success-strong">
+                    Plantilla reconstruida desde el catálogo de referencia
+                  </p>
+                  <p className="mt-1 text-xs leading-5 text-text-secondary">
+                    Al agregar o eliminar productos, el sistema conserva estas reglas y crea las páginas necesarias automáticamente.
+                  </p>
+                </div>
+              ) : null}
             </div>
           ) : null}
 

@@ -6,7 +6,10 @@ import LoadingScreen from './components/layout/LoadingScreen'
 import EmptyState from './components/ui/EmptyState'
 import { Link, RouterProvider, useRouter } from './lib/router'
 import CatalogDataPage from './pages/CatalogDataPage'
+import CatalogCreativePage from './pages/CatalogCreativePage'
+import CatalogImportsPage from './pages/CatalogImportsPage'
 import CatalogPreviewPage from './pages/CatalogPreviewPage'
+import CatalogPricesPage from './pages/CatalogPricesPage'
 import CatalogTemplatePage from './pages/CatalogTemplatePage'
 import CatalogVersionsPage from './pages/CatalogVersionsPage'
 import DashboardPage from './pages/DashboardPage'
@@ -51,13 +54,19 @@ function Application() {
   else if (path === '/configuracion') page = <SettingsPage />
   else {
     const catalogRoute = path.match(
-      /^\/catalogos\/([^/]+)\/(datos|plantilla|preview|versiones)\/?$/,
+      /^\/catalogos\/([^/]+)\/(datos|importaciones|precios|creativo|plantilla|preview|versiones)\/?$/,
     )
     if (catalogRoute) {
       const section = catalogRoute[2]
       const content =
         section === 'datos' ? (
           <CatalogDataPage />
+        ) : section === 'importaciones' ? (
+          <CatalogImportsPage />
+        ) : section === 'precios' ? (
+          <CatalogPricesPage />
+        ) : section === 'creativo' ? (
+          <CatalogCreativePage />
         ) : section === 'plantilla' ? (
           <CatalogTemplatePage />
         ) : section === 'preview' ? (

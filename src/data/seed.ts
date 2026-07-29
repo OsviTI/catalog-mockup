@@ -28,6 +28,27 @@ const artwork = (label: string, color: string, kind: 'glass' | 'wine' | 'abstrac
 
 export const seedTemplates: CatalogTemplate[] = [
   {
+    id: 'template-crystal-official',
+    name: 'Crystal Rock · Plantilla oficial',
+    description:
+      'Reconstrucción web reutilizable del catálogo de referencia: portada de campaña, aperturas por categoría, producto destacado, grillas comerciales y cierre.',
+    layout: 'crystal-official',
+    coverVariants: ['image-split', 'campaign', 'signature'],
+    recommendedFor: 'Continuidad del catálogo actual de Crystal Rock',
+    accent: '#c51522',
+    preview: { surface: '#fffaf5', ink: '#161616', muted: '#f0d6d2' },
+    origin: 'client',
+    defaultCoverVariant: 'image-split',
+    defaultProductsPerPage: 4,
+    defaultTheme: {
+      primary: '#c51522',
+      secondary: '#111111',
+      background: '#fffaf5',
+      text: '#202020',
+      headingFont: 'modern',
+    },
+  },
+  {
     id: 'template-editorial',
     name: 'Editorial Rojo',
     description: 'La propuesta más cercana al catálogo actual de Crystal Rock.',
@@ -87,7 +108,7 @@ export const seedCatalogs: Catalog[] = [
     name: 'Cristalería · Colección 2026',
     description: 'Catálogo digital basado en el material de referencia del cliente.',
     status: 'review',
-    templateId: 'template-editorial',
+      templateId: 'template-crystal-official',
     coverVariant: 'image-split',
     settings: { ...baseSettings, title: 'Cristalería' },
     createdAt: '2026-07-24T13:10:00.000Z',
@@ -280,12 +301,14 @@ export const seedProducts: Product[] = [
 ]
 
 export const seedWorkspace: WorkspaceData = {
-  schemaVersion: 1,
+  schemaVersion: 3,
   catalogs: seedCatalogs,
   categories: seedCategories,
   products: seedProducts,
   templates: seedTemplates,
   versions: [],
+  importSessions: [],
+  creativeAssets: [],
   activity: [
     {
       id: 'activity-1',
@@ -309,6 +332,9 @@ export const createCatalogSeed = (name: string): {
   const id = `catalog-${crypto.randomUUID()}`
   const categoryId = `category-${crypto.randomUUID()}`
   const createdAt = new Date().toISOString()
+  const officialTemplate = seedTemplates.find(
+    (template) => template.id === 'template-crystal-official',
+  )
 
   return {
     catalog: {
@@ -316,9 +342,17 @@ export const createCatalogSeed = (name: string): {
       name,
       description: 'Nuevo catálogo en preparación.',
       status: 'draft',
-      templateId: seedTemplates[0].id,
-      coverVariant: 'campaign',
-      settings: { ...structuredClone(baseSettings), title: name },
+      templateId: 'template-crystal-official',
+      coverVariant: officialTemplate?.defaultCoverVariant ?? 'image-split',
+      settings: {
+        ...structuredClone(baseSettings),
+        title: name,
+        productsPerPage: officialTemplate?.defaultProductsPerPage ?? 4,
+        theme: {
+          ...structuredClone(baseSettings.theme),
+          ...officialTemplate?.defaultTheme,
+        },
+      },
       createdAt,
       updatedAt: createdAt,
     },

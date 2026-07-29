@@ -50,12 +50,16 @@ const CoverPage = ({
       <div className="catalog-cover-overlay" />
     </div>
     <div className="catalog-promotion">
-      <span>{catalog.settings.website}</span>
+      <span>
+        <small>Hacé tu compra por la web y obtené un</small>
+        <b>{catalog.settings.website}</b>
+      </span>
       <strong>{catalog.settings.discountLabel}</strong>
     </div>
     <div className="catalog-updated">ACTUALIZADO: {formatDate(catalog.settings.validFrom)}</div>
     <div className="catalog-cover-title">
       <span className="catalog-logo">CRYSTAL ROCK</span>
+      <small className="catalog-cover-kicker">{catalog.settings.campaignLabel}</small>
       <h1>{catalog.settings.title}</h1>
       <p>{catalog.settings.subtitle}</p>
     </div>

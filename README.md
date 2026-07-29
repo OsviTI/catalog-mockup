@@ -6,10 +6,15 @@ Mockup funcional para automatizar la creación de catálogos comerciales PDF a p
 
 - Dashboard de catálogos con búsqueda, filtros, estados, duplicación y eliminación protegida.
 - Creación de catálogos y gestión manual de productos y categorías.
-- Importación de Excel/CSV con normalización de columnas y validación previa.
+- Centro de importaciones con sesiones persistentes y evidencia de origen.
+- Comparación de Excel/CSV por código estable, con diferencias por campo y aplicación selectiva.
+- Bandeja de productos ausentes del Excel sin eliminación automática.
+- Diagnóstico de PDF de InDesign, extracción de texto nativo y candidatos revisables.
+- Modo de edición rápida de precios con variación porcentual.
+- Estudio creativo local para mejorar fotografías sin destruir el original y preparar conceptos visuales.
 - Descarga de una plantilla Excel oficial con hojas `Productos`, `Categorías` y `Catálogo`.
 - Carga de imágenes de producto e imágenes ambientales por categoría.
-- Tres plantillas editoriales y variantes de portada configurables.
+- Plantilla oficial reutilizable de Crystal Rock, tres propuestas alternativas y variantes de portada configurables.
 - Editor de contenido, densidad, colores y datos visibles con previsualización en vivo.
 - Generación y descarga de PDF digital A4.
 - Historial inmutable de versiones, publicación y restauración como nuevo borrador.
@@ -26,6 +31,7 @@ Mockup funcional para automatizar la creación de catálogos comerciales PDF a p
 - Zod para validación
 - `read-excel-file` y `write-excel-file` para Excel
 - jsPDF + html2canvas para PDF A4
+- PDF.js para diagnóstico, extracción y renderizado de PDF de origen
 - Lucide para iconografía
 - Router hash local y tipado para navegación portable
 
@@ -62,7 +68,7 @@ Para conservar o trasladar una presentación:
 2. Elegir **Exportar copia**.
 3. En el navegador de destino, usar **Importar copia**.
 
-La copia JSON contiene catálogos, productos, configuración, versiones e imágenes. No debe considerarse un formato de integración definitivo para producción.
+La copia JSON contiene catálogos, productos, sesiones de importación, historial creativo, configuración, versiones e imágenes. No debe considerarse un formato de integración definitivo para producción.
 
 ## Estructura principal
 
@@ -83,5 +89,8 @@ La fuente oficial de decisiones es [docs/contexto_maestro_agente.md](docs/contex
 
 - Los datos son locales y demostrativos; no existen usuarios, permisos ni backend.
 - Las APIs de productos están previstas como evolución, pero no forman parte de esta etapa.
+- Los PDF sin texto nativo se diagnostican correctamente, pero la extracción OCR requiere elegir un proveedor externo.
+- La plantilla oficial conserva sus reglas de portada, destacado, grilla y cierre; no pretende recuperar automáticamente tipografías licenciadas o efectos privados del archivo fuente de InDesign.
+- La generación visual mediante IA real queda desacoplada hasta definir proveedor, privacidad y costos; el estudio creativo ya implementa el flujo local, el historial y la edición básica.
 - El PDF está optimizado para distribución digital A4, no para preprensa con sangrado, perfiles CMYK o marcas de corte.
 - Las imágenes referenciadas por nombre desde Excel deben cargarse manualmente para vincular el archivo real.

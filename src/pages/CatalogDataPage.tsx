@@ -14,7 +14,7 @@ import {
   Upload,
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { useParams } from '../lib/router'
+import { useNavigate, useParams } from '../lib/router'
 import ProductImage from '../components/catalog/ProductImage'
 import ProductEditorModal from '../components/modals/ProductEditorModal'
 import Badge from '../components/ui/Badge'
@@ -31,8 +31,9 @@ export default function CatalogDataPage() {
   const workspace = useCatalogStore((state) => state.workspace)
   const addProduct = useCatalogStore((state) => state.addProduct)
   const deleteProduct = useCatalogStore((state) => state.deleteProduct)
-  const replaceProducts = useCatalogStore((state) => state.replaceProducts)
+  const createExcelImportSession = useCatalogStore((state) => state.createExcelImportSession)
   const addCategory = useCatalogStore((state) => state.addCategory)
+  const navigate = useNavigate()
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [editorId, setEditorId] = useState<string | null>(null)
@@ -147,13 +148,20 @@ export default function CatalogDataPage() {
             </Button>
             <Button
               onClick={() => {
-                if (!importResult) return
-                replaceProducts(catalogId, importResult.products)
+                if (!importResult || !importFile) return
+                createExcelImportSession(
+                  catalogId,
+                  importFile.name,
+                  importResult.products,
+                  importResult.warnings,
+                  importResult.importedFields,
+                )
                 closeImport()
+                navigate(`/catalogos/${catalogId}/importaciones`)
               }}
               disabled={!importResult?.products.length}
             >
-              Importar {importResult?.products.length ?? 0} productos
+              Comparar {importResult?.products.length ?? 0} productos
             </Button>
           </>
         }
@@ -204,7 +212,7 @@ export default function CatalogDataPage() {
               <div className="flex items-center gap-3">
                 <CheckCircle2 className="h-5 w-5 text-success" />
                 <div>
-                  <p className="text-sm font-bold text-text">Planilla lista para importar</p>
+                  <p className="text-sm font-bold text-text">Planilla lista para comparar</p>
                   <p className="text-xs text-text-secondary">
                     {importResult.products.length} productos detectados
                   </p>
@@ -223,7 +231,7 @@ export default function CatalogDataPage() {
             ))}
             {products.length ? (
               <p className="text-xs text-text-tertiary">
-                Al confirmar se reemplazarán los {products.length} productos actuales. Las versiones existentes no cambian.
+                Al confirmar se abrirá una revisión detallada. Ningún producto se reemplaza o elimina automáticamente.
               </p>
             ) : null}
           </div>

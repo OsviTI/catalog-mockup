@@ -4,7 +4,7 @@
 
 Esta es la fuente oficial y viva del proyecto. Debe leerse antes de proponer alcance, UX, arquitectura o implementación. Las decisiones confirmadas prevalecen sobre documentos anteriores. Los documentos `CONTEXT.md`, `contexto_maestro_ide.md` y `prompt_mockup_catalogos (1).md` se conservan como antecedentes, no como autoridad.
 
-Última actualización: 28 de julio de 2026.
+Última actualización: 29 de julio de 2026.
 
 ## Problema y objetivo
 
@@ -45,6 +45,12 @@ El material evidencia campos como nombre, código, precio, medidas, capacidad, m
 - Los cambios deben sobrevivir a recargas y poder conservarse para futuras presentaciones.
 - Las versiones anteriores no se sobrescriben. Restaurar una versión crea el nuevo estado de borrador y conserva el historial.
 - El formato de importación recomendado tiene tres hojas: `Productos`, `Categorías` y `Catálogo`.
+- Los catálogos PDF de entrada provienen normalmente de Adobe InDesign, por lo que se priorizará la extracción de texto y estructura nativa antes de recurrir a OCR.
+- El código de producto se considera inicialmente un identificador estable y será la clave primaria para comparar fuentes.
+- Excel es la fuente oficial cuando exista una diferencia entre la planilla y el catálogo digitalizado.
+- Un producto que exista en el catálogo pero no aparezca en el nuevo Excel nunca se eliminará automáticamente. Se mostrará en una lista de pendientes para que el usuario decida conservarlo, retirarlo del catálogo o eliminarlo.
+- La selección de un proveedor externo de OCR o procesamiento documental se pospone. El mockup debe mantener una arquitectura preparada para conectarlo más adelante.
+- El módulo creativo con IA deberá contemplar tanto generación de portadas y ambientaciones como edición o mejora de fotografías reales de producto.
 
 ## Estado funcional implementado
 
@@ -57,9 +63,22 @@ El mockup incluye:
 - carga local de imágenes de producto y ambientales;
 - importación de XLSX, XLS y CSV;
 - normalización flexible de encabezados;
+- importación Excel no destructiva mediante sesiones persistentes;
+- comparación por código en estados sin cambios, actualizado, nuevo, ausente y conflicto;
+- aprobación individual por producto y por campo;
+- bandeja obligatoria de decisión para productos ausentes;
+- diagnóstico de PDF digital, mixto o escaneado mediante PDF.js;
+- extracción nativa de candidatos con página, evidencia y confianza;
+- revisión lado a lado con la página original renderizada;
+- edición rápida de precios y operaciones porcentuales;
+- estudio creativo con mejora local no destructiva de fotografías;
+- conceptos visuales persistentes preparados para sustituirse por un adaptador de IA;
 - validación de campos obligatorios, códigos duplicados e imágenes faltantes;
 - descarga de plantilla Excel y exportación de datos actuales;
-- tres plantillas: Editorial Rojo, Minimal Arena y Nocturna Premium;
+- plantilla oficial reutilizable de Crystal Rock reconstruida desde `V2_CR_MVP.pdf`;
+- tres propuestas alternativas: Editorial Rojo, Minimal Arena y Nocturna Premium;
+- detección de la plantilla oficial al analizar documentos con la identidad del catálogo de referencia;
+- paginación automática que conserva portada, destacados, grillas y cierre al cambiar la cantidad de productos;
 - variantes de portada, densidades de 2, 4 o 6 productos por página, contenido visible y paleta;
 - vista previa compartida con el motor de exportación;
 - generación PDF digital A4;
@@ -68,6 +87,17 @@ El mockup incluye:
 - guardado automático local;
 - copia portable de datos e imágenes;
 - interfaz adaptable a escritorio, tablet y móvil.
+
+## Evolución funcional pendiente
+
+- OCR de páginas escaneadas mediante un proveedor externo.
+- Recorte automático de las fotografías incrustadas en el PDF.
+- Reglas de extracción específicas por cada nueva plantilla de InDesign.
+- Reconstrucción de otras plantillas visuales que el cliente entregue en el futuro.
+- Generación y edición de imágenes mediante IA externa.
+- Procesamiento asíncrono en backend para archivos grandes y uso multiusuario.
+
+El detalle funcional y el orden de implementación se documentan en `PLAN_IMPORTACION_PDF_Y_RECONCILIACION.md`.
 
 ## Modelo editorial implementado
 
@@ -105,6 +135,7 @@ Esta estrategia es adecuada para una demostración durable, pero una solución m
 - Zod para validación.
 - `read-excel-file` y `write-excel-file` para entrada y salida de planillas.
 - jsPDF y html2canvas para generar el PDF en el navegador.
+- PDF.js para diagnosticar, extraer texto y renderizar páginas de documentos de origen.
 - Router hash local y tipado para portabilidad en hosting estático sin sumar una dependencia innecesaria.
 - Lucide React para iconos accesibles y consistentes.
 
@@ -130,6 +161,8 @@ Excel y PDF se cargan de forma diferida para mantener liviana la carga inicial.
 - Flujo real de revisión/aprobación y futuros roles.
 - Si la salida final necesita requisitos de imprenta además del PDF digital.
 - Contrato y periodicidad de una futura integración API.
+- Si los catálogos e imágenes podrán enviarse posteriormente a servicios externos de procesamiento.
+- Qué operaciones de edición con IA deben priorizarse para fotografías reales: eliminación de fondo, ambientación, retoque, extensión o reemplazo de elementos.
 
 ## Reglas de continuidad
 
@@ -143,4 +176,4 @@ Excel y PDF se cargan de forma diferida para mantener liviana la carga inicial.
 
 ## Próxima fase recomendada
 
-Validar el mockup con el cliente usando una planilla real completa y una carpeta real de imágenes. Con esa sesión deben cerrarse el contrato de datos, las reglas de precio, la asociación masiva de imágenes y el flujo de aprobación. Después podrá diseñarse la arquitectura de producción con backend y API.
+Validar las reglas de extracción con más catálogos reales de InDesign y medir la precisión por plantilla. Luego seleccionar los adaptadores de OCR e IA según privacidad, costo y volumen, manteniendo la revisión humana ya implementada.

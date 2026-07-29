@@ -1,10 +1,13 @@
 import {
   ArrowLeft,
+  BadgeDollarSign,
   CheckCircle2,
   FileSpreadsheet,
   Files,
   LayoutTemplate,
+  ScanSearch,
   Settings2,
+  Sparkles,
 } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { Link, NavLink, useParams } from '../../lib/router'
@@ -15,6 +18,9 @@ import EmptyState from '../ui/EmptyState'
 
 const tabs = [
   { path: 'datos', label: 'Datos y productos', icon: FileSpreadsheet },
+  { path: 'importaciones', label: 'Importaciones', icon: ScanSearch },
+  { path: 'precios', label: 'Precios', icon: BadgeDollarSign },
+  { path: 'creativo', label: 'Estudio creativo', icon: Sparkles },
   { path: 'plantilla', label: 'Diseño y plantilla', icon: LayoutTemplate },
   { path: 'preview', label: 'Vista previa', icon: CheckCircle2 },
   { path: 'versiones', label: 'Versiones', icon: Files },

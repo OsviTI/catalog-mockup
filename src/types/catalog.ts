@@ -1,7 +1,26 @@
 export type CatalogStatus = 'draft' | 'review' | 'published'
 export type ValidationLevel = 'success' | 'warning' | 'error'
-export type TemplateLayout = 'editorial' | 'minimal' | 'bold'
+export type TemplateLayout = 'crystal-official' | 'editorial' | 'minimal' | 'bold'
 export type CoverVariant = 'campaign' | 'image-split' | 'signature'
+export type ImportSource = 'excel' | 'pdf'
+export type ImportStatus = 'analyzing' | 'needs-review' | 'ready' | 'applied' | 'failed'
+export type ImportChangeKind = 'unchanged' | 'updated' | 'new' | 'missing' | 'conflict'
+export type MissingResolution = 'pending' | 'keep' | 'remove'
+export type ImportableProductField =
+  | 'name'
+  | 'code'
+  | 'price'
+  | 'categoryId'
+  | 'measurements'
+  | 'capacity'
+  | 'material'
+  | 'packaging'
+  | 'pack'
+  | 'master'
+  | 'model'
+  | 'color'
+  | 'featured'
+  | 'order'
 
 export interface ImageReference {
   assetId?: string
@@ -94,6 +113,10 @@ export interface CatalogTemplate {
     ink: string
     muted: string
   }
+  origin?: 'client' | 'system'
+  defaultCoverVariant?: CoverVariant
+  defaultProductsPerPage?: 2 | 4 | 6
+  defaultTheme?: Partial<CatalogTheme>
 }
 
 export interface CatalogSnapshot {
@@ -112,10 +135,87 @@ export interface CatalogVersion {
   snapshot: CatalogSnapshot
 }
 
+export interface ProductFieldChange {
+  field: ImportableProductField
+  before?: string | number | boolean
+  after?: string | number | boolean
+  selected: boolean
+}
+
+export interface PdfCandidate {
+  id: string
+  pageNumber: number
+  confidence: number
+  originalText: string
+  product: Product
+  selected: boolean
+  reviewed: boolean
+}
+
+export interface PdfDiagnostics {
+  pageCount: number
+  pagesWithText: number
+  textItems: number
+  documentKind: 'digital' | 'mixed' | 'scanned'
+  templateHint?: string
+  pageTexts: Array<{
+    pageNumber: number
+    text: string
+    textItemCount: number
+  }>
+}
+
+export interface ImportChange {
+  id: string
+  kind: ImportChangeKind
+  code: string
+  productId?: string
+  incoming?: Product
+  changes: ProductFieldChange[]
+  selected: boolean
+  missingResolution?: MissingResolution
+  note?: string
+}
+
+export interface ImportSession {
+  id: string
+  catalogId: string
+  source: ImportSource
+  sourceName: string
+  sourceAssetId?: string
+  status: ImportStatus
+  createdAt: string
+  updatedAt: string
+  warnings: string[]
+  changes: ImportChange[]
+  pdfDiagnostics?: PdfDiagnostics
+  pdfCandidates?: PdfCandidate[]
+}
+
+export interface CreativeAsset {
+  id: string
+  catalogId: string
+  assetId: string
+  name: string
+  kind: 'enhanced-product' | 'concept-cover' | 'concept-category'
+  prompt?: string
+  sourceProductId?: string
+  createdAt: string
+}
+
 export interface ActivityItem {
   id: string
   catalogId: string
-  type: 'created' | 'updated' | 'generated' | 'published' | 'restored' | 'imported'
+  type:
+    | 'created'
+    | 'updated'
+    | 'generated'
+    | 'published'
+    | 'restored'
+    | 'imported'
+    | 'scanned'
+    | 'reconciled'
+    | 'creative'
   message: string
   createdAt: string
 }
@@ -133,6 +233,8 @@ export interface WorkspaceData {
   products: Product[]
   templates: CatalogTemplate[]
   versions: CatalogVersion[]
+  importSessions: ImportSession[]
+  creativeAssets: CreativeAsset[]
   activity: ActivityItem[]
   settings: WorkspaceSettings
 }

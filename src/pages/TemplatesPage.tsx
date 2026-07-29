@@ -56,7 +56,12 @@ export default function TemplatesPage() {
               <div className="p-6">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <h2 className="text-lg font-bold text-text">{template.name}</h2>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h2 className="text-lg font-bold text-text">{template.name}</h2>
+                      {template.origin === 'client' ? (
+                        <Badge tone="success">Oficial</Badge>
+                      ) : null}
+                    </div>
                     <p className="mt-1 text-xs text-text-tertiary">{template.recommendedFor}</p>
                   </div>
                   <Badge tone="neutral">{usage} usos</Badge>

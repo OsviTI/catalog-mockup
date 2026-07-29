@@ -1,4 +1,4 @@
-import type { Catalog, Category, Product } from '../types/catalog'
+import type { Catalog, Category, ImportableProductField, Product } from '../types/catalog'
 import { safeFilename } from './format'
 
 type Cell = string | number | boolean | Date | null
@@ -96,6 +96,7 @@ const readCsv = async (file: File): Promise<Cell[][]> => {
 export interface ImportResult {
   products: Product[]
   warnings: string[]
+  importedFields: ImportableProductField[]
 }
 
 export const importProductsFile = async (
@@ -167,7 +168,11 @@ export const importProductsFile = async (
     warnings.push('Los nombres de imagen se importaron como referencia; carga los archivos para vincularlos.')
   }
 
-  return { products, warnings: [...new Set(warnings)] }
+  const importedFields = (Object.keys(columns) as Array<keyof typeof columns>)
+    .filter((key) => columns[key] >= 0 && key !== 'image')
+    .map((key) => (key === 'category' ? 'categoryId' : key)) as ImportableProductField[]
+
+  return { products, warnings: [...new Set(warnings)], importedFields }
 }
 
 const headerCell = (value: string) => ({

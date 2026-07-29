@@ -12,7 +12,7 @@ Las páginas orquestan cada etapa del flujo y reutilizan componentes de interfaz
 
 ### Estado y dominio
 
-El store de Zustand contiene acciones explícitas para catálogos, categorías, productos, configuración y versiones. Cada modificación clona el espacio de trabajo, aplica la operación y programa el guardado automático.
+El store de Zustand contiene acciones explícitas para catálogos, categorías, productos, configuración, sesiones de importación, recursos creativos y versiones. Cada modificación clona el espacio de trabajo, aplica la operación y programa el guardado automático.
 
 ### Persistencia
 
@@ -25,7 +25,8 @@ Los componentes obtienen una URL temporal para cada imagen y la liberan al desmo
 
 ### Entrada y salida
 
-- Excel/CSV se transforma al modelo `Product`.
+- Excel/CSV se transforma primero en una sesión temporal y un conjunto de diferencias por campo.
+- PDF.js diagnostica documentos, extrae texto nativo, renderiza evidencia y produce candidatos revisables.
 - Zod y reglas de negocio generan errores o avisos.
 - El libro oficial se genera con tres hojas.
 - El PDF se construye página por página en A4.
@@ -43,6 +44,10 @@ Workspace
 │   └── Products
 ├── Versions
 │   └── Snapshot(Catalog + Categories + Products)
+├── ImportSessions
+│   ├── PDF candidates
+│   └── Excel field changes
+├── CreativeAssets
 └── Activity
 
 IndexedDB Assets
@@ -51,7 +56,7 @@ IndexedDB Assets
 
 ## Rendimiento
 
-- jsPDF, html2canvas y las librerías Excel utilizan importación dinámica.
+- PDF.js, jsPDF, html2canvas y las librerías Excel utilizan importación dinámica.
 - Las imágenes permanecen como blobs y no inflan el estado de React.
 - Las páginas filtran el store con selectores.
 - El guardado tiene un debounce breve para agrupar escritura durante edición.

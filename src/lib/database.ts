@@ -43,6 +43,20 @@ export const persistAsset = async (file: File) => {
   return asset
 }
 
+export const persistBlob = async (blob: Blob, name: string) => {
+  const asset: StoredAsset = {
+    id: `asset-${crypto.randomUUID()}`,
+    blob,
+    name,
+    type: blob.type || 'application/octet-stream',
+    size: blob.size,
+    createdAt: new Date().toISOString(),
+  }
+  const db = await database
+  await db.put('assets', asset)
+  return asset
+}
+
 export const loadAsset = async (id: string) => {
   const db = await database
   return db.get('assets', id)

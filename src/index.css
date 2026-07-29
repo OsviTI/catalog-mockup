@@ -300,6 +300,26 @@ label {
   line-height: 1;
 }
 
+.catalog-promotion span,
+.catalog-promotion small,
+.catalog-promotion b {
+  display: block;
+}
+
+.catalog-promotion small {
+  max-width: 170px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.catalog-promotion b {
+  margin-top: 3px;
+  font-size: 9px;
+  font-weight: 500;
+  opacity: 0.72;
+}
+
 .catalog-updated {
   position: absolute;
   z-index: 2;
@@ -331,6 +351,15 @@ label {
   font-family: Georgia, serif;
   font-size: 19px;
   line-height: 1;
+}
+
+.catalog-cover-kicker {
+  display: block;
+  margin-top: 20px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
 }
 
 .catalog-cover-title h1 {
@@ -746,6 +775,118 @@ label {
 }
 
 /* Template variations */
+.catalog-layout-crystal-official .catalog-page {
+  --catalog-primary: #c51522;
+  --catalog-secondary: #111;
+  background-color: #fffaf5;
+  background-image:
+    radial-gradient(circle at 12% 8%, rgb(197 21 34 / 4%), transparent 170px),
+    linear-gradient(90deg, transparent 0 97%, rgb(197 21 34 / 3%) 97%);
+  color: #202020;
+  font-family: "Segoe UI", Arial, sans-serif;
+}
+
+.catalog-layout-crystal-official .catalog-cover,
+.catalog-layout-crystal-official .catalog-closing {
+  background: #111;
+  color: white;
+}
+
+.catalog-layout-crystal-official .catalog-cover::after {
+  position: absolute;
+  z-index: 1;
+  right: -80px;
+  bottom: -95px;
+  width: 310px;
+  height: 310px;
+  border: 1px solid rgb(197 21 34 / 25%);
+  border-radius: 999px;
+  box-shadow:
+    0 0 0 42px rgb(197 21 34 / 4%),
+    0 0 0 88px rgb(197 21 34 / 2%);
+  content: "";
+}
+
+.catalog-layout-crystal-official .catalog-cover-overlay {
+  background:
+    linear-gradient(to bottom, rgb(0 0 0 / 2%) 0 42%, rgb(17 17 17 / 98%) 58%),
+    linear-gradient(120deg, transparent, rgb(0 0 0 / 28%));
+}
+
+.catalog-layout-crystal-official .catalog-cover-image-split .catalog-cover-overlay {
+  background: linear-gradient(to bottom, rgb(0 0 0 / 3%), rgb(0 0 0 / 38%));
+}
+
+.catalog-layout-crystal-official .catalog-promotion {
+  top: 40px;
+  min-height: 84px;
+  border: 1px solid rgb(255 255 255 / 18%);
+  border-radius: 0 0 30px 30px;
+  background: #c51522;
+  box-shadow: 0 16px 35px rgb(0 0 0 / 18%);
+}
+
+.catalog-layout-crystal-official .catalog-updated {
+  top: 145px;
+  background: #c51522;
+  font-weight: 700;
+}
+
+.catalog-layout-crystal-official .catalog-logo {
+  background: transparent;
+  padding: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 22px;
+  letter-spacing: 0.08em;
+}
+
+.catalog-layout-crystal-official .catalog-cover-title h1 {
+  margin-top: 8px;
+  font-size: 58px;
+}
+
+.catalog-layout-crystal-official .catalog-section-heading {
+  border-width: 3px;
+  border-color: #c51522;
+  box-shadow: 0 12px 26px rgb(197 21 34 / 8%);
+}
+
+.catalog-layout-crystal-official .catalog-section-heading span,
+.catalog-layout-crystal-official .catalog-price,
+.catalog-layout-crystal-official .catalog-product-meta > strong {
+  background: #c51522;
+}
+
+.catalog-layout-crystal-official .catalog-featured-main,
+.catalog-layout-crystal-official .catalog-featured-data,
+.catalog-layout-crystal-official .catalog-featured-hero,
+.catalog-layout-crystal-official .catalog-product-grid {
+  border-color: #c51522;
+}
+
+.catalog-layout-crystal-official .catalog-product-card,
+.catalog-layout-crystal-official .catalog-product-meta,
+.catalog-layout-crystal-official .catalog-product-meta span {
+  border-color: rgb(197 21 34 / 58%);
+}
+
+.catalog-layout-crystal-official .catalog-product-copy h3,
+.catalog-layout-crystal-official .catalog-featured-main h2,
+.catalog-layout-crystal-official .catalog-grid-heading {
+  color: #c51522;
+}
+
+.catalog-layout-crystal-official .catalog-closing {
+  background-image:
+    radial-gradient(circle at 50% 34%, rgb(197 21 34 / 14%), transparent 260px),
+    linear-gradient(145deg, #171717, #080808);
+}
+
+.catalog-layout-crystal-official .catalog-order-box {
+  border-color: rgb(197 21 34 / 55%);
+  box-shadow: 0 22px 60px rgb(0 0 0 / 25%);
+}
+
 .catalog-layout-minimal .catalog-page {
   --catalog-primary: #8b5e3c;
   font-family: Georgia, "Times New Roman", serif;
