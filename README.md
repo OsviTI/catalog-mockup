@@ -15,7 +15,7 @@ Mockup funcional para automatizar la creación de catálogos comerciales PDF a p
 - Recortes visuales provisionales por producto, con zoom, desplazamiento y guardado persistente como imagen.
 - Edición de precios dentro de la ficha y de las revisiones de importación, sin una etapa separada.
 - Acciones por producto para reemplazar su fotografía o abrir una mejora creativa no destructiva.
-- Previsualización completa en vivo de las decisiones pendientes de una importación.
+- Vista previa y descarga construidas sobre todas las páginas del PDF original, conservando su diseño y reemplazando sólo las zonas modificadas.
 - Descarga de una plantilla Excel oficial con hojas `Productos`, `Categorías` y `Catálogo`.
 - Carga de imágenes de producto e imágenes ambientales por categoría.
 - Plantilla oficial reutilizable de Crystal Rock, tres propuestas alternativas y variantes de portada configurables.
@@ -96,7 +96,7 @@ La fuente oficial de decisiones es [docs/contexto_maestro_agente.md](docs/contex
 - Las APIs de productos están previstas como evolución, pero no forman parte de esta etapa.
 - Los PDF sin texto nativo se diagnostican correctamente, pero la extracción OCR requiere elegir un proveedor externo.
 - La detección inicial de zonas de imagen utiliza reglas por plantilla y requiere aprobación humana antes de asociar el recorte al producto.
-- La plantilla oficial conserva sus reglas de portada, destacado, grilla y cierre; no pretende recuperar automáticamente tipografías licenciadas o efectos privados del archivo fuente de InDesign.
+- La plantilla oficial conserva el PDF original como fondo. Las zonas modificadas se recomponen con estilos equivalentes, sin depender de tipografías licenciadas o efectos privados del archivo fuente de InDesign.
 - La generación visual mediante IA real queda desacoplada hasta definir proveedor, privacidad y costos; cada producto ya expone el flujo local de mejora, historial y aprobación.
 - El PDF está optimizado para distribución digital A4, no para preprensa con sangrado, perfiles CMYK o marcas de corte.
 - Las imágenes referenciadas por nombre desde Excel deben cargarse manualmente para vincular el archivo real.

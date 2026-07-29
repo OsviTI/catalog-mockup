@@ -9,6 +9,9 @@ export const migrateWorkspace = (value: WorkspaceData): WorkspaceData => {
   workspace.importSessions ??= []
   workspace.importSessions.forEach((session) => {
     if (session.source !== 'pdf' || !session.pdfCandidates?.length) return
+    session.pdfCandidates.forEach((candidate) => {
+      candidate.sourceProduct ??= structuredClone(candidate.product)
+    })
     addProvisionalCropRegions(
       session.pdfCandidates,
       Boolean(session.pdfDiagnostics?.templateHint),

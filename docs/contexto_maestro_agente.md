@@ -78,7 +78,8 @@ El mockup incluye:
 - guardado persistente del recorte aprobado como imagen real del producto;
 - edición de precio integrada en cada producto y en las decisiones de importación;
 - reemplazo directo de fotografía y estudio creativo contextual por producto;
-- previsualización en vivo de todas las páginas usando candidatos y decisiones todavía no aplicados;
+- Importaciones enfocada en revisar y aplicar datos, sin duplicar allí la vista completa;
+- vista previa y exportación de todas las páginas sobre el PDF base original, preservando lo que no cambió y recomponiendo sólo las fichas actualizadas de la plantilla reconocida;
 - navegación reducida a Datos, Importaciones, Diseño, Vista previa y Versiones;
 - botón Continuar y escritura inmediata antes de cada cambio de etapa;
 - conceptos visuales persistentes preparados para sustituirse por un adaptador de IA;

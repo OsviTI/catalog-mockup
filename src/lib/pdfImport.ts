@@ -1,4 +1,5 @@
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
+import type { PDFDocumentProxy } from 'pdfjs-dist'
 import { addProvisionalCropRegions } from './pdfCropRegions'
 import type {
   Category,
@@ -21,14 +22,26 @@ const standaloneCodePattern = /^[A-Z0-9][A-Z0-9./_-]{4,}$/
 const ignoredNamePattern =
   /^(precio|c[oó]digo|sku|medidas?|material|pack|master|embalaje|capacidad|modelo|color|www\.|p[aá]gina)/i
 const pdfWasmUrl = `${import.meta.env.BASE_URL}pdfjs-wasm/`
+const documentCache = new WeakMap<Blob, Promise<PDFDocumentProxy>>()
 
-const openPdf = async (blob: Blob) => {
+const loadPdf = async (blob: Blob) => {
   const pdfjs = await import('pdfjs-dist')
   pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl
   return pdfjs.getDocument({
     data: new Uint8Array(await blob.arrayBuffer()),
     wasmUrl: pdfWasmUrl,
   }).promise
+}
+
+const openPdf = (blob: Blob) => {
+  const cached = documentCache.get(blob)
+  if (cached) return cached
+  const pending = loadPdf(blob).catch((error) => {
+    documentCache.delete(blob)
+    throw error
+  })
+  documentCache.set(blob, pending)
+  return pending
 }
 
 const normalizeText = (value: string) =>
@@ -275,6 +288,7 @@ export const analyzePdfCatalog = async (
           .slice(Math.max(0, codeIndex - 5), codeIndex + 13)
           .join('\n'),
         product,
+        sourceProduct: structuredClone(product),
         selected: true,
         reviewed: false,
         extractionMethod: assessment.extractionMethod,
@@ -326,10 +340,15 @@ export const analyzePdfCatalog = async (
   }
 }
 
-export const renderPdfPage = async (blob: Blob, pageNumber: number, canvas: HTMLCanvasElement) => {
+export const renderPdfPage = async (
+  blob: Blob,
+  pageNumber: number,
+  canvas: HTMLCanvasElement,
+  scale = 1.15,
+) => {
   const document = await openPdf(blob)
   const page = await document.getPage(Math.min(Math.max(1, pageNumber), document.numPages))
-  const viewport = page.getViewport({ scale: 1.15 })
+  const viewport = page.getViewport({ scale })
   const context = canvas.getContext('2d')
   if (!context) return
   canvas.width = viewport.width

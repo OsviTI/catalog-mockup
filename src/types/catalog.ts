@@ -162,6 +162,7 @@ export interface PdfCandidate {
   confidence: number
   originalText: string
   product: Product
+  sourceProduct?: Product
   selected: boolean
   reviewed: boolean
   extractionMethod?: 'template-rule' | 'native-generic'

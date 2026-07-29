@@ -9,12 +9,14 @@ import {
   Plus,
   RotateCcw,
 } from 'lucide-react'
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from '../lib/router'
 import CatalogDocument from '../components/catalog/CatalogDocument'
+import SourcePdfCatalogDocument from '../components/catalog/SourcePdfCatalogDocument'
 import Badge from '../components/ui/Badge'
 import Button from '../components/ui/Button'
 import { downloadCatalogPdf } from '../lib/pdf'
+import { sourcePdfDocumentPageCount } from '../lib/sourcePdfLayout'
 import { validateProducts } from '../lib/validation'
 import { useCatalogStore } from '../store/catalogStore'
 
@@ -27,6 +29,7 @@ export default function CatalogPreviewPage() {
   const [exporting, setExporting] = useState(false)
   const [progress, setProgress] = useState({ current: 0, total: 0 })
   const [exportError, setExportError] = useState('')
+  const [sourceReady, setSourceReady] = useState(false)
 
   const catalog = workspace.catalogs.find((item) => item.id === catalogId)
   const template = workspace.templates.find((item) => item.id === catalog?.templateId)
@@ -34,9 +37,27 @@ export default function CatalogPreviewPage() {
     .filter((item) => item.catalogId === catalogId)
     .sort((a, b) => a.order - b.order)
   const products = workspace.products.filter((item) => item.catalogId === catalogId)
+  const pdfSessions = workspace.importSessions
+    .filter(
+      (session) =>
+        session.catalogId === catalogId &&
+        session.source === 'pdf' &&
+        session.sourceAssetId &&
+        session.pdfDiagnostics,
+    )
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+  const baseSession =
+    pdfSessions.find((session) => session.isBaseDocument) ?? pdfSessions[0]
+  const usesSourcePdf = Boolean(baseSession)
+  const sourceTemplateMapped =
+    baseSession?.pdfDiagnostics?.templateHint === 'template-crystal-official'
   const issues = useMemo(() => validateProducts(products), [products])
   const blockingIssues = issues.filter((item) => item.level === 'error')
   const warningIssues = issues.filter((item) => item.level === 'warning')
+
+  useEffect(() => {
+    setSourceReady(!usesSourcePdf)
+  }, [baseSession?.id, usesSourcePdf])
 
   if (!catalog || !template) return null
 
@@ -56,12 +77,14 @@ export default function CatalogPreviewPage() {
     }
   }
 
-  const estimatedPages =
-    2 +
-    categories.reduce((total, category) => {
-      const count = products.filter((item) => item.categoryId === category.id).length
-      return total + (count ? 1 + Math.ceil(Math.max(0, count - 1) / catalog.settings.productsPerPage) : 0)
-    }, 0)
+  const estimatedPages = baseSession
+    ? sourcePdfDocumentPageCount(baseSession, products)
+    :
+    (2 +
+      categories.reduce((total, category) => {
+        const count = products.filter((item) => item.categoryId === category.id).length
+        return total + (count ? 1 + Math.ceil(Math.max(0, count - 1) / catalog.settings.productsPerPage) : 0)
+      }, 0))
 
   return (
     <div className="grid gap-5 2xl:grid-cols-[minmax(0,1fr)_320px]">
@@ -72,9 +95,12 @@ export default function CatalogPreviewPage() {
               <h2 className="font-bold text-text">Vista previa del PDF</h2>
               <Badge tone="neutral">A4 digital</Badge>
               <Badge tone="primary">{estimatedPages} páginas</Badge>
+              {usesSourcePdf ? <Badge tone="success">PDF original preservado</Badge> : null}
             </div>
             <p className="mt-1 text-xs text-text-tertiary">
-              Representación exacta utilizada para la descarga.
+              {usesSourcePdf
+                ? 'Las páginas conservan el PDF base y superponen únicamente los datos o fotografías actualizados.'
+                : 'Representación exacta utilizada para la descarga.'}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -124,23 +150,40 @@ export default function CatalogPreviewPage() {
                 transform: `scale(${zoom})`,
               }}
             >
+              {baseSession ? (
+                <SourcePdfCatalogDocument
+                  session={baseSession}
+                  products={products}
+                  renderScale={1.2}
+                />
+              ) : (
+                <CatalogDocument
+                  catalog={catalog}
+                  categories={categories}
+                  products={products}
+                  template={template}
+                />
+              )}
+            </div>
+          </div>
+        </div>
+        <div aria-hidden="true" className="pointer-events-none fixed left-[-10000px] top-0">
+          <div ref={documentRef}>
+            {baseSession ? (
+              <SourcePdfCatalogDocument
+                session={baseSession}
+                products={products}
+                renderScale={2}
+                onReady={() => setSourceReady(true)}
+              />
+            ) : (
               <CatalogDocument
                 catalog={catalog}
                 categories={categories}
                 products={products}
                 template={template}
               />
-            </div>
-          </div>
-        </div>
-        <div aria-hidden="true" className="pointer-events-none fixed left-[-10000px] top-0">
-          <div ref={documentRef}>
-            <CatalogDocument
-              catalog={catalog}
-              categories={categories}
-              products={products}
-              template={template}
-            />
+            )}
           </div>
         </div>
       </section>
@@ -148,6 +191,12 @@ export default function CatalogPreviewPage() {
       <aside className="space-y-5">
         <section className="surface-card p-5">
           <h3 className="font-bold text-text">Preparación del documento</h3>
+          {usesSourcePdf && !sourceTemplateMapped ? (
+            <div className="mt-4 rounded-2xl border border-warning/20 bg-warning/5 p-3 text-xs leading-5 text-warning">
+              El documento original está preservado, pero esta plantilla todavía no
+              tiene zonas editables mapeadas. Sus páginas se mostrarán sin alterar.
+            </div>
+          ) : null}
           <div className="mt-4 space-y-3">
             {[
               {
@@ -157,7 +206,7 @@ export default function CatalogPreviewPage() {
               },
               {
                 label: 'Plantilla',
-                detail: template.name,
+                detail: usesSourcePdf ? 'PDF base original' : template.name,
                 ok: true,
               },
               {
@@ -223,10 +272,12 @@ export default function CatalogPreviewPage() {
             size="lg"
             icon={<Download className="h-4 w-4" />}
             loading={exporting}
-            disabled={blockingIssues.length > 0}
+            disabled={blockingIssues.length > 0 || !sourceReady}
             onClick={() => void exportPdf()}
           >
-            Descargar PDF y versionar
+            {!sourceReady && usesSourcePdf
+              ? 'Preparando páginas originales…'
+              : 'Descargar PDF y versionar'}
           </Button>
           {blockingIssues.length ? (
             <Link

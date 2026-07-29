@@ -181,8 +181,8 @@ Vista de alta densidad orientada a actualización:
 - guardado como cambio pendiente antes de versionar.
 
 La edición dejó de ser una pestaña independiente. El precio se modifica en la ficha del
-producto o durante la revisión de diferencias, siempre acompañado por la
-previsualización del catálogo.
+producto o durante la revisión de diferencias. El resultado editorial completo se
+consulta después en Vista previa, compuesta sobre el PDF original.
 
 ## 6. Estudio creativo por producto
 

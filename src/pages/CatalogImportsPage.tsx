@@ -1,7 +1,6 @@
 import {
   AlertTriangle,
   Check,
-  ChevronDown,
   ChevronRight,
   Crop,
   FileSearch,
@@ -15,7 +14,6 @@ import {
   Upload,
 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import CatalogDocument from '../components/catalog/CatalogDocument'
 import PdfCropEditorModal from '../components/modals/PdfCropEditorModal'
 import PdfCropPreview from '../components/pdf/PdfCropPreview'
 import Badge from '../components/ui/Badge'
@@ -30,7 +28,6 @@ import {
   importSummary,
   invalidConflictResolutionIds,
   normalizeProductCode,
-  previewProductsForImport,
 } from '../lib/reconciliation'
 import { useParams } from '../lib/router'
 import { useCatalogStore } from '../store/catalogStore'
@@ -40,7 +37,6 @@ import type {
   ImportableProductField,
   ImportSession,
   PdfCandidate,
-  Product,
 } from '../types/catalog'
 
 const changeLabels: Record<ImportChangeKind, string> = {
@@ -87,66 +83,6 @@ const extractionFields: ImportableProductField[] = [
   'pack',
   'master',
 ]
-
-function ImportLivePreview({
-  catalogId,
-  products,
-}: {
-  catalogId: string
-  products: Product[]
-}) {
-  const workspace = useCatalogStore((state) => state.workspace)
-  const catalog = workspace.catalogs.find((item) => item.id === catalogId)
-  const template = workspace.templates.find((item) => item.id === catalog?.templateId)
-  const categories = workspace.categories
-    .filter((category) => category.catalogId === catalogId)
-    .sort((a, b) => a.order - b.order)
-  if (!catalog || !template) return null
-
-  const pageCount =
-    2 +
-    categories.reduce((total, category) => {
-      const count = products.filter((product) => product.categoryId === category.id).length
-      return (
-        total +
-        (count
-          ? 1 +
-            Math.ceil(
-              Math.max(0, count - 1) / catalog.settings.productsPerPage,
-            )
-          : 0)
-      )
-    }, 0)
-  const scale = 0.36
-  const documentHeight = pageCount * 1123 + Math.max(0, pageCount - 1) * 24
-
-  return (
-    <div className="max-h-[760px] overflow-auto bg-slate-200 p-5">
-      <div
-        className="mx-auto"
-        style={{
-          width: `${794 * scale}px`,
-          height: `${documentHeight * scale}px`,
-        }}
-      >
-        <div
-          style={{
-            width: '794px',
-            transform: `scale(${scale})`,
-            transformOrigin: 'top left',
-          }}
-        >
-          <CatalogDocument
-            catalog={catalog}
-            categories={categories}
-            products={products}
-            template={template}
-          />
-        </div>
-      </div>
-    </div>
-  )
-}
 
 function PdfPagePreview({ session, pageNumber }: { session: ImportSession; pageNumber: number }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -768,7 +704,6 @@ export default function CatalogImportsPage() {
   const [pdfPage, setPdfPage] = useState(1)
   const [cropCandidateId, setCropCandidateId] = useState('')
   const [savingCrop, setSavingCrop] = useState(false)
-  const [previewOpen, setPreviewOpen] = useState(true)
   const selected = sessions.find((session) => session.id === selectedId) ?? sessions[0]
   const summary = useMemo(
     () => (selected ? importSummary(selected.changes) : null),
@@ -795,14 +730,6 @@ export default function CatalogImportsPage() {
   const firstCandidatePage = selected?.pdfCandidates?.[0]?.pageNumber ?? 1
   const cropCandidate = selected?.pdfCandidates?.find(
     (candidate) => candidate.id === cropCandidateId,
-  )
-  const currentProducts = useMemo(
-    () => workspace.products.filter((product) => product.catalogId === catalogId),
-    [catalogId, workspace.products],
-  )
-  const previewProducts = useMemo(
-    () => previewProductsForImport(currentProducts, selected),
-    [currentProducts, selected],
   )
 
   useEffect(() => {
@@ -1064,35 +991,6 @@ export default function CatalogImportsPage() {
                 ))}
               </div>
             ) : null}
-
-            <div className="border-b border-border">
-              <button
-                type="button"
-                onClick={() => setPreviewOpen((value) => !value)}
-                className="flex w-full items-center justify-between gap-4 bg-primary/5 px-5 py-4 text-left"
-              >
-                <div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="font-bold text-text">
-                      Previsualización con los cambios actuales
-                    </h3>
-                    <Badge tone="primary">En vivo</Badge>
-                    <Badge tone="neutral">{previewProducts.length} productos</Badge>
-                  </div>
-                  <p className="mt-1 text-xs text-text-secondary">
-                    Editar un candidato, seleccionar un campo o resolver un conflicto actualiza esta versión antes de aplicarla.
-                  </p>
-                </div>
-                <ChevronDown
-                  className={`h-5 w-5 shrink-0 text-primary transition ${
-                    previewOpen ? 'rotate-180' : ''
-                  }`}
-                />
-              </button>
-              {previewOpen ? (
-                <ImportLivePreview catalogId={catalogId} products={previewProducts} />
-              ) : null}
-            </div>
 
             {selected.source === 'pdf' && selected.pdfDiagnostics && !selected.changes.length ? (
               <div className="space-y-5 p-5">
