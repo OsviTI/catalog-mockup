@@ -13,8 +13,9 @@ Mockup funcional para automatizar la creación de catálogos comerciales PDF a p
 - Diagnóstico de PDF de InDesign, extracción de texto nativo y candidatos revisables.
 - Reglas específicas para la plantilla oficial, confianza por completitud y señalización de campos no detectados.
 - Recortes visuales provisionales por producto, con zoom, desplazamiento y guardado persistente como imagen.
-- Modo de edición rápida de precios con variación porcentual.
-- Estudio creativo local para mejorar fotografías sin destruir el original y preparar conceptos visuales.
+- Edición de precios dentro de la ficha y de las revisiones de importación, sin una etapa separada.
+- Acciones por producto para reemplazar su fotografía o abrir una mejora creativa no destructiva.
+- Previsualización completa en vivo de las decisiones pendientes de una importación.
 - Descarga de una plantilla Excel oficial con hojas `Productos`, `Categorías` y `Catálogo`.
 - Carga de imágenes de producto e imágenes ambientales por categoría.
 - Plantilla oficial reutilizable de Crystal Rock, tres propuestas alternativas y variantes de portada configurables.
@@ -22,6 +23,7 @@ Mockup funcional para automatizar la creación de catálogos comerciales PDF a p
 - Generación y descarga de PDF digital A4.
 - Historial inmutable de versiones, publicación y restauración como nuevo borrador.
 - Guardado automático en IndexedDB.
+- Guardado forzado antes de navegar con acciones **Continuar** en cada etapa del catálogo.
 - Copia portable con datos, versiones e imágenes para restaurar la demo en otro navegador.
 
 ## Tecnologías
@@ -95,6 +97,6 @@ La fuente oficial de decisiones es [docs/contexto_maestro_agente.md](docs/contex
 - Los PDF sin texto nativo se diagnostican correctamente, pero la extracción OCR requiere elegir un proveedor externo.
 - La detección inicial de zonas de imagen utiliza reglas por plantilla y requiere aprobación humana antes de asociar el recorte al producto.
 - La plantilla oficial conserva sus reglas de portada, destacado, grilla y cierre; no pretende recuperar automáticamente tipografías licenciadas o efectos privados del archivo fuente de InDesign.
-- La generación visual mediante IA real queda desacoplada hasta definir proveedor, privacidad y costos; el estudio creativo ya implementa el flujo local, el historial y la edición básica.
+- La generación visual mediante IA real queda desacoplada hasta definir proveedor, privacidad y costos; cada producto ya expone el flujo local de mejora, historial y aprobación.
 - El PDF está optimizado para distribución digital A4, no para preprensa con sangrado, perfiles CMYK o marcas de corte.
 - Las imágenes referenciadas por nombre desde Excel deben cargarse manualmente para vincular el archivo real.

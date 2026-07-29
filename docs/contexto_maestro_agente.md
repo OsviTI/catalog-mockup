@@ -76,8 +76,11 @@ El mockup incluye:
 - propuesta de región visual por candidato y miniatura junto a sus datos;
 - editor de recorte con escala y desplazamiento;
 - guardado persistente del recorte aprobado como imagen real del producto;
-- edición rápida de precios y operaciones porcentuales;
-- estudio creativo con mejora local no destructiva de fotografías;
+- edición de precio integrada en cada producto y en las decisiones de importación;
+- reemplazo directo de fotografía y estudio creativo contextual por producto;
+- previsualización en vivo de todas las páginas usando candidatos y decisiones todavía no aplicados;
+- navegación reducida a Datos, Importaciones, Diseño, Vista previa y Versiones;
+- botón Continuar y escritura inmediata antes de cada cambio de etapa;
 - conceptos visuales persistentes preparados para sustituirse por un adaptador de IA;
 - validación de campos obligatorios, códigos duplicados e imágenes faltantes;
 - descarga de plantilla Excel y exportación de datos actuales;

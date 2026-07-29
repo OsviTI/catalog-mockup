@@ -15,7 +15,7 @@ interface TextItemLike {
   transform: number[]
 }
 
-const currencyPattern = /(?:\$|ars|precio)\s*[:.]?\s*([\d.]+(?:,\d{1,2})?)/i
+const currencyPattern = /(?:\$|ars|precio)\s*[:.]?\s*([0-9][0-9.,]*)/i
 const labeledCodePattern = /(?:c[oó]d(?:igo)?|sku)\s*[:.#-]?\s*([A-Z0-9][A-Z0-9./_-]{3,})/i
 const standaloneCodePattern = /^[A-Z0-9][A-Z0-9./_-]{4,}$/
 const ignoredNamePattern =
@@ -39,18 +39,21 @@ const normalizeText = (value: string) =>
     .replace(/[^a-z0-9]+/g, '')
 
 const parsePrice = (value: string) => {
-  const lastComma = value.lastIndexOf(',')
-  const lastDot = value.lastIndexOf('.')
+  const cleanValue = value.replace(/[.,]+$/, '')
+  const lastComma = cleanValue.lastIndexOf(',')
+  const lastDot = cleanValue.lastIndexOf('.')
   const normalized =
     lastComma > -1 && lastDot > -1
       ? lastComma > lastDot
-        ? value.replaceAll('.', '').replace(',', '.')
-        : value.replaceAll(',', '')
+        ? cleanValue.replaceAll('.', '').replace(',', '.')
+        : cleanValue.replaceAll(',', '')
       : lastComma > -1
-        ? value.length - lastComma <= 3
-          ? value.replace(',', '.')
-          : value.replaceAll(',', '')
-        : value
+        ? cleanValue.length - lastComma <= 3
+          ? cleanValue.replace(',', '.')
+          : cleanValue.replaceAll(',', '')
+        : lastDot > -1 && cleanValue.length - lastDot === 4
+          ? cleanValue.replaceAll('.', '')
+          : cleanValue
   const parsed = Number(normalized)
   return Number.isFinite(parsed) ? parsed : 0
 }

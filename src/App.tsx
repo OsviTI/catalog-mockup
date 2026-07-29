@@ -6,10 +6,8 @@ import LoadingScreen from './components/layout/LoadingScreen'
 import EmptyState from './components/ui/EmptyState'
 import { Link, RouterProvider, useRouter } from './lib/router'
 import CatalogDataPage from './pages/CatalogDataPage'
-import CatalogCreativePage from './pages/CatalogCreativePage'
 import CatalogImportsPage from './pages/CatalogImportsPage'
 import CatalogPreviewPage from './pages/CatalogPreviewPage'
-import CatalogPricesPage from './pages/CatalogPricesPage'
 import CatalogTemplatePage from './pages/CatalogTemplatePage'
 import CatalogVersionsPage from './pages/CatalogVersionsPage'
 import DashboardPage from './pages/DashboardPage'
@@ -44,6 +42,10 @@ function Application() {
   useEffect(() => {
     const catalogRoot = path.match(/^\/catalogos\/([^/]+)\/?$/)
     if (catalogRoot) navigate(`/catalogos/${catalogRoot[1]}/datos`, { replace: true })
+    const legacySection = path.match(/^\/catalogos\/([^/]+)\/(?:precios|creativo)\/?$/)
+    if (legacySection) {
+      navigate(`/catalogos/${legacySection[1]}/datos`, { replace: true })
+    }
   }, [navigate, path])
 
   if (!hydrated) return <LoadingScreen />
@@ -54,7 +56,7 @@ function Application() {
   else if (path === '/configuracion') page = <SettingsPage />
   else {
     const catalogRoute = path.match(
-      /^\/catalogos\/([^/]+)\/(datos|importaciones|precios|creativo|plantilla|preview|versiones)\/?$/,
+      /^\/catalogos\/([^/]+)\/(datos|importaciones|plantilla|preview|versiones)\/?$/,
     )
     if (catalogRoute) {
       const section = catalogRoute[2]
@@ -63,10 +65,6 @@ function Application() {
           <CatalogDataPage />
         ) : section === 'importaciones' ? (
           <CatalogImportsPage />
-        ) : section === 'precios' ? (
-          <CatalogPricesPage />
-        ) : section === 'creativo' ? (
-          <CatalogCreativePage />
         ) : section === 'plantilla' ? (
           <CatalogTemplatePage />
         ) : section === 'preview' ? (

@@ -1,6 +1,7 @@
 import type {
   ImportChange,
   ImportableProductField,
+  ImportSession,
   Product,
   ProductFieldChange,
 } from '../types/catalog'
@@ -202,4 +203,93 @@ export const invalidConflictResolutionIds = (
     .forEach(claim)
 
   return invalid
+}
+
+export const previewProductsForImport = (
+  currentProducts: Product[],
+  session?: ImportSession,
+) => {
+  const products = structuredClone(currentProducts)
+  if (!session) return products
+
+  const replaceOrAdd = (incoming: Product) => {
+    const code = normalizeProductCode(incoming.code)
+    const index = products.findIndex(
+      (product) => normalizeProductCode(product.code) === code,
+    )
+    if (index >= 0) {
+      products[index] = {
+        ...products[index],
+        ...structuredClone(incoming),
+        id: products[index].id,
+      }
+    } else {
+      products.push(structuredClone(incoming))
+    }
+  }
+
+  if (session.source === 'pdf' && !session.changes.length) {
+    session.pdfCandidates
+      ?.filter((candidate) => candidate.selected)
+      .forEach((candidate) => replaceOrAdd(candidate.product))
+    return products
+  }
+
+  session.changes.forEach((change) => {
+    if (
+      change.kind === 'missing' &&
+      change.missingResolution === 'remove' &&
+      change.productId
+    ) {
+      const index = products.findIndex((product) => product.id === change.productId)
+      if (index >= 0) products.splice(index, 1)
+      return
+    }
+
+    if (change.kind === 'conflict') {
+      if (change.conflictResolution === 'keep-current' || !change.incoming) return
+      if (change.conflictResolution === 'add-new') {
+        products.push(structuredClone(change.incoming))
+        return
+      }
+      const currentIndex = change.productId
+        ? products.findIndex((product) => product.id === change.productId)
+        : -1
+      if (
+        change.conflictResolution === 'apply-incoming' ||
+        change.conflictResolution === 'pending'
+      ) {
+        if (currentIndex >= 0) {
+          products[currentIndex] = {
+            ...products[currentIndex],
+            ...structuredClone(change.incoming),
+            id: products[currentIndex].id,
+          }
+        } else if (change.conflictResolution === 'pending') {
+          products.push(structuredClone(change.incoming))
+        }
+      }
+      return
+    }
+
+    if (!change.selected || !change.incoming) return
+    if (change.kind === 'new') {
+      replaceOrAdd(change.incoming)
+      return
+    }
+    if (change.kind !== 'updated' || !change.productId) return
+    const current = products.find((product) => product.id === change.productId)
+    if (!current) return
+    change.changes.forEach((fieldChange) => {
+      if (!fieldChange.selected) return
+      Object.assign(current, {
+        [fieldChange.field]: change.incoming?.[fieldChange.field],
+      })
+    })
+    if (session.source === 'pdf' && change.incoming.image.assetId) {
+      current.image = structuredClone(change.incoming.image)
+    }
+  })
+
+  return products
 }

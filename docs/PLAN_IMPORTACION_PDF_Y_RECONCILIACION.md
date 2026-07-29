@@ -13,11 +13,11 @@ Implementado en el mockup local:
 - comparación por código y diferencias seleccionables por campo;
 - resolución manual de conflictos directamente desde la fila comparada;
 - resolución explícita de productos ausentes;
-- edición rápida de precios;
+- edición de precio dentro de producto e importaciones;
 - diagnóstico, extracción nativa y renderizado de PDF;
 - extracción reforzada por plantilla, puntaje de completitud y listado de campos faltantes;
 - candidatos editables con evidencia, página y confianza;
-- mejora local no destructiva de fotografías e historial creativo;
+- mejora local no destructiva e historial creativo desde cada producto;
 - conceptos visuales locales con una interfaz preparada para el futuro adaptador de IA.
 - detección y aplicación de la plantilla oficial reutilizable de Crystal Rock;
 - recomposición automática de páginas al agregar, retirar o reordenar productos.
@@ -166,7 +166,7 @@ Acciones:
 
 La acción por defecto será no realizar ningún cambio.
 
-## 5. Modo rápido de precios
+## 5. Edición contextual de precios
 
 Vista de alta densidad orientada a actualización:
 
@@ -180,7 +180,14 @@ Vista de alta densidad orientada a actualización:
 - resumen monetario;
 - guardado como cambio pendiente antes de versionar.
 
-## 6. Estudio creativo
+La edición dejó de ser una pestaña independiente. El precio se modifica en la ficha del
+producto o durante la revisión de diferencias, siempre acompañado por la
+previsualización del catálogo.
+
+## 6. Estudio creativo por producto
+
+La mejora de fotografía se abre desde la fila o ficha del producto. El usuario también
+puede reemplazar directamente la imagen sin entrar al editor creativo.
 
 Tipos de trabajo:
 
@@ -244,13 +251,13 @@ La interfaz no dependerá de un proveedor específico.
 2. Comparador Excel y clasificación de diferencias.
 3. Bandeja de productos ausentes.
 4. Aplicación selectiva de cambios y registro de actividad.
-5. Modo rápido de precios.
+5. Edición contextual de precios.
 6. Carga y diagnóstico de PDF.
 7. Extracción nativa desde PDF de InDesign.
 8. Estudio de revisión PDF.
 9. Recorte visual editable desde páginas PDF.
 10. Adaptadores de OCR pendientes de proveedor.
-11. Estudio creativo y adaptador de IA.
+11. Estudio creativo por producto y adaptador de IA.
 12. Regeneración, vista previa y nueva versión PDF.
 
 ## Criterios de aceptación iniciales

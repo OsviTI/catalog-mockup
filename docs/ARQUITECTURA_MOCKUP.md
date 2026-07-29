@@ -23,10 +23,15 @@ IndexedDB tiene dos almacenes:
 
 Los componentes obtienen una URL temporal para cada imagen y la liberan al desmontarse. La copia portable transforma temporalmente los blobs en data URLs dentro del JSON y los reconstruye antes de iniciar la transacción de restauración.
 
+El guardado mantiene un debounce durante la edición y expone además una operación
+`flushSave`. La navegación del flujo la ejecuta antes de cambiar de pantalla, de modo
+que el botón **Continuar** y las pestañas confirman la escritura actual en IndexedDB.
+
 ### Entrada y salida
 
 - Excel/CSV se transforma primero en una sesión temporal y un conjunto de diferencias por campo.
 - PDF.js diagnostica documentos, extrae texto nativo, renderiza evidencia y produce candidatos revisables.
+- La sesión de importación también construye una proyección temporal de productos para mostrar todas las páginas con campos y decisiones pendientes, sin modificar todavía el catálogo oficial.
 - Cada catálogo nuevo conserva obligatoriamente su PDF base como activo protegido de la primera sesión.
 - Las páginas se rasterizan en alta resolución con los decodificadores WebAssembly de PDF.js. Las regiones normalizadas permiten previsualizar, desplazar y escalar un recorte sin modificar la fuente.
 - Un recorte aprobado se codifica como WebP, se guarda en `assets` y se incorpora a la imagen del producto cuando se aplican las decisiones de la sesión.
@@ -64,6 +69,7 @@ IndexedDB Assets
 - Las imágenes permanecen como blobs y no inflan el estado de React.
 - La rasterización de páginas usada por varios candidatos se comparte mediante una caché en memoria por activo y página.
 - Las páginas filtran el store con selectores.
+- Los ajustes creativos y el reemplazo de imagen se abren desde el producto; no requieren cargar una pantalla creativa completa.
 - El guardado tiene un debounce breve para agrupar escritura durante edición.
 - Vite divide automáticamente los módulos de Excel y PDF en chunks independientes.
 - El PDF usa un documento A4 fuera de pantalla sin el zoom de interfaz.

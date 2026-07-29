@@ -1,26 +1,26 @@
 import {
   ArrowLeft,
-  BadgeDollarSign,
   CheckCircle2,
+  ChevronRight,
   FileSpreadsheet,
   Files,
   LayoutTemplate,
+  LoaderCircle,
+  Save,
   ScanSearch,
   Settings2,
-  Sparkles,
 } from 'lucide-react'
 import type { ReactNode } from 'react'
-import { Link, NavLink, useParams } from '../../lib/router'
+import { Link, NavLink, useNavigate, useParams, useRouter } from '../../lib/router'
 import { formatRelativeDate, statusLabel } from '../../lib/format'
 import { useCatalogStore } from '../../store/catalogStore'
 import Badge from '../ui/Badge'
+import Button from '../ui/Button'
 import EmptyState from '../ui/EmptyState'
 
 const tabs = [
   { path: 'datos', label: 'Datos y productos', icon: FileSpreadsheet },
   { path: 'importaciones', label: 'Importaciones', icon: ScanSearch },
-  { path: 'precios', label: 'Precios', icon: BadgeDollarSign },
-  { path: 'creativo', label: 'Estudio creativo', icon: Sparkles },
   { path: 'plantilla', label: 'Diseño y plantilla', icon: LayoutTemplate },
   { path: 'preview', label: 'Vista previa', icon: CheckCircle2 },
   { path: 'versiones', label: 'Versiones', icon: Files },
@@ -34,9 +34,14 @@ const statusTone = {
 
 export default function CatalogWorkspaceLayout({ children }: { children: ReactNode }) {
   const { catalogId } = useParams()
+  const { path: currentPath } = useRouter()
+  const navigate = useNavigate()
   const catalog = useCatalogStore((state) =>
     state.workspace.catalogs.find((item) => item.id === catalogId),
   )
+  const saving = useCatalogStore((state) => state.saving)
+  const lastSavedAt = useCatalogStore((state) => state.lastSavedAt)
+  const flushSave = useCatalogStore((state) => state.flushSave)
 
   if (!catalog) {
     return (
@@ -51,6 +56,15 @@ export default function CatalogWorkspaceLayout({ children }: { children: ReactNo
         }
       />
     )
+  }
+
+  const currentTabIndex = tabs.findIndex(({ path }) =>
+    currentPath.endsWith(`/${path}`),
+  )
+  const nextTab = tabs[currentTabIndex + 1]
+  const saveAndNavigate = async (target: string) => {
+    await flushSave()
+    navigate(target)
   }
 
   return (
@@ -79,6 +93,10 @@ export default function CatalogWorkspaceLayout({ children }: { children: ReactNo
           </div>
           <Link
             to={`/catalogos/${catalog.id}/preview`}
+            onClick={(event) => {
+              event.preventDefault()
+              void saveAndNavigate(`/catalogos/${catalog.id}/preview`)
+            }}
             className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-primary/20 hover:bg-primary-hover"
           >
             <CheckCircle2 className="h-4 w-4" />
@@ -91,6 +109,10 @@ export default function CatalogWorkspaceLayout({ children }: { children: ReactNo
             <NavLink
               key={path}
               to={`/catalogos/${catalog.id}/${path}`}
+              onClick={(event) => {
+                event.preventDefault()
+                void saveAndNavigate(`/catalogos/${catalog.id}/${path}`)
+              }}
               className={({ isActive }) =>
                 `flex shrink-0 items-center gap-2 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition ${
                   isActive
@@ -110,6 +132,45 @@ export default function CatalogWorkspaceLayout({ children }: { children: ReactNo
       </header>
 
       {children}
+
+      <footer className="surface-card flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+        <div className="flex items-center gap-3">
+          <span
+            className={`rounded-xl p-2 ${
+              saving ? 'bg-primary/10 text-primary' : 'bg-success/10 text-success'
+            }`}
+          >
+            {saving ? (
+              <LoaderCircle className="h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4" />
+            )}
+          </span>
+          <div>
+            <p className="text-sm font-bold text-text">
+              {saving ? 'Guardando cambios…' : 'Cambios guardados'}
+            </p>
+            <p className="text-xs text-text-tertiary">
+              {lastSavedAt
+                ? `Persistidos ${formatRelativeDate(lastSavedAt)}`
+                : 'El guardado automático está activo.'}
+            </p>
+          </div>
+        </div>
+        <Button
+          icon={<ChevronRight className="h-4 w-4" />}
+          loading={saving}
+          onClick={() =>
+            void saveAndNavigate(
+              nextTab
+                ? `/catalogos/${catalog.id}/${nextTab.path}`
+                : '/',
+            )
+          }
+        >
+          {nextTab ? `Continuar a ${nextTab.label}` : 'Finalizar y volver al dashboard'}
+        </Button>
+      </footer>
     </div>
   )
 }

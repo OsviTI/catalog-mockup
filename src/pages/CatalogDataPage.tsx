@@ -6,9 +6,11 @@ import {
   FileSpreadsheet,
   Filter,
   ImageIcon,
+  LoaderCircle,
   PackagePlus,
   Plus,
   Search,
+  Sparkles,
   Star,
   Trash2,
   Upload,
@@ -16,12 +18,14 @@ import {
 import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from '../lib/router'
 import ProductImage from '../components/catalog/ProductImage'
+import ProductCreativeModal from '../components/modals/ProductCreativeModal'
 import ProductEditorModal from '../components/modals/ProductEditorModal'
 import Badge from '../components/ui/Badge'
 import Button from '../components/ui/Button'
 import EmptyState from '../components/ui/EmptyState'
 import Modal from '../components/ui/Modal'
 import { downloadCatalogWorkbook, importProductsFile, type ImportResult } from '../lib/excel'
+import { persistAsset } from '../lib/database'
 import { formatCurrency } from '../lib/format'
 import { validateProducts } from '../lib/validation'
 import { useCatalogStore } from '../store/catalogStore'
@@ -31,8 +35,10 @@ export default function CatalogDataPage() {
   const workspace = useCatalogStore((state) => state.workspace)
   const addProduct = useCatalogStore((state) => state.addProduct)
   const deleteProduct = useCatalogStore((state) => state.deleteProduct)
+  const updateProduct = useCatalogStore((state) => state.updateProduct)
   const createExcelImportSession = useCatalogStore((state) => state.createExcelImportSession)
   const addCategory = useCatalogStore((state) => state.addCategory)
+  const flushSave = useCatalogStore((state) => state.flushSave)
   const navigate = useNavigate()
   const [search, setSearch] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('all')
@@ -46,6 +52,10 @@ export default function CatalogDataPage() {
   const [importing, setImporting] = useState(false)
   const [categoryName, setCategoryName] = useState('')
   const [showCategoryForm, setShowCategoryForm] = useState(false)
+  const [creativeId, setCreativeId] = useState<string | null>(null)
+  const [uploadingImageId, setUploadingImageId] = useState<string | null>(null)
+  const [imageMessage, setImageMessage] = useState('')
+  const [imageError, setImageError] = useState('')
 
   const catalog = workspace.catalogs.find((item) => item.id === catalogId)
   const categories = workspace.categories
@@ -75,6 +85,32 @@ export default function CatalogDataPage() {
     setEditorId(productId)
   }
 
+  const replaceProductImage = async (productId: string, file?: File) => {
+    if (!file) return
+    setImageMessage('')
+    setImageError('')
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      setImageError('Utiliza una imagen JPG, PNG o WebP.')
+      return
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setImageError('La imagen supera el máximo de 10 MB.')
+      return
+    }
+    setUploadingImageId(productId)
+    try {
+      const asset = await persistAsset(file)
+      updateProduct(productId, {
+        image: { assetId: asset.id, name: asset.name, focalPoint: 'center' },
+      })
+      setImageMessage('La fotografía se actualizó y ya se refleja en el catálogo.')
+    } catch {
+      setImageError('No pudimos guardar la fotografía. Intenta nuevamente.')
+    } finally {
+      setUploadingImageId(null)
+    }
+  }
+
   const parseImport = async (file: File) => {
     setImportFile(file)
     setImportResult(null)
@@ -96,6 +132,20 @@ export default function CatalogDataPage() {
     setImportError('')
   }
 
+  const confirmImport = async () => {
+    if (!importResult || !importFile) return
+    createExcelImportSession(
+      catalogId,
+      importFile.name,
+      importResult.products,
+      importResult.warnings,
+      importResult.importedFields,
+    )
+    await flushSave()
+    closeImport()
+    navigate(`/catalogos/${catalogId}/importaciones`)
+  }
+
   return (
     <div className="grid gap-5 2xl:grid-cols-[1fr_320px]">
       <ProductEditorModal
@@ -106,6 +156,11 @@ export default function CatalogDataPage() {
           setNewProductId(null)
           setEditorId(null)
         }}
+      />
+      <ProductCreativeModal
+        open={Boolean(creativeId)}
+        productId={creativeId}
+        onClose={() => setCreativeId(null)}
       />
       <Modal
         open={Boolean(deleteId)}
@@ -147,18 +202,7 @@ export default function CatalogDataPage() {
               Cancelar
             </Button>
             <Button
-              onClick={() => {
-                if (!importResult || !importFile) return
-                createExcelImportSession(
-                  catalogId,
-                  importFile.name,
-                  importResult.products,
-                  importResult.warnings,
-                  importResult.importedFields,
-                )
-                closeImport()
-                navigate(`/catalogos/${catalogId}/importaciones`)
-              }}
+              onClick={() => void confirmImport()}
               disabled={!importResult?.products.length}
             >
               Comparar {importResult?.products.length ?? 0} productos
@@ -303,9 +347,21 @@ export default function CatalogDataPage() {
           <p className="text-xs font-medium text-text-tertiary">{filtered.length} resultados</p>
         </div>
 
+        {imageMessage || imageError ? (
+          <div
+            className={`border-b px-5 py-3 text-xs font-medium sm:px-6 ${
+              imageError
+                ? 'border-error/15 bg-error/5 text-error'
+                : 'border-success/15 bg-success/5 text-success-strong'
+            }`}
+          >
+            {imageError || imageMessage}
+          </div>
+        ) : null}
+
         {filtered.length ? (
           <div className="overflow-x-auto">
-            <table className="min-w-[920px] w-full text-left text-sm">
+            <table className="min-w-[1120px] w-full text-left text-sm">
               <thead className="border-b border-border bg-white text-[11px] font-bold uppercase tracking-wider text-text-tertiary">
                 <tr>
                   <th className="px-6 py-3">Producto</th>
@@ -362,7 +418,34 @@ export default function CatalogDataPage() {
                         <p className="mt-1 text-xs text-text-tertiary">{product.measurements || 'Sin medidas'}</p>
                       </td>
                       <td className="px-6 py-4">
-                        <div className="flex justify-end gap-1">
+                        <div className="flex flex-wrap justify-end gap-1">
+                          <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold text-text-secondary hover:bg-slate-100">
+                            {uploadingImageId === product.id ? (
+                              <LoaderCircle className="h-3.5 w-3.5 animate-spin" />
+                            ) : (
+                              <ImageIcon className="h-3.5 w-3.5" />
+                            )}
+                            Actualizar foto
+                            <input
+                              type="file"
+                              accept="image/jpeg,image/png,image/webp"
+                              className="sr-only"
+                              disabled={Boolean(uploadingImageId)}
+                              onChange={(event) => {
+                                const file = event.target.files?.[0]
+                                event.target.value = ''
+                                void replaceProductImage(product.id, file)
+                              }}
+                            />
+                          </label>
+                          <button
+                            type="button"
+                            onClick={() => setCreativeId(product.id)}
+                            className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold text-violet-700 hover:bg-violet-50"
+                          >
+                            <Sparkles className="h-3.5 w-3.5" />
+                            Mejorar
+                          </button>
                           <button
                             type="button"
                             onClick={() => setEditorId(product.id)}

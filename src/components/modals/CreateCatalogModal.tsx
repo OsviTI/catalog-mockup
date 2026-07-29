@@ -89,6 +89,7 @@ export default function CreateCatalogModal({ open, onClose }: CreateCatalogModal
           setProgress(`Construyendo catálogo base · página ${page} de ${total}`),
       )
       completePdfAnalysis(sessionId, result.diagnostics, result.candidates, result.warnings)
+      await useCatalogStore.getState().flushSave()
       reset()
       onClose()
       navigate(`/catalogos/${catalogId}/importaciones`)

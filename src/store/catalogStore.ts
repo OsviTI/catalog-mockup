@@ -38,6 +38,7 @@ interface CatalogStore {
   saving: boolean
   lastSavedAt?: string
   hydrate: () => Promise<void>
+  flushSave: () => Promise<void>
   createCatalog: (name: string) => string
   duplicateCatalog: (catalogId: string) => string | null
   deleteCatalog: (catalogId: string) => void
@@ -211,6 +212,19 @@ export const useCatalogStore = create<CatalogStore>()(
         } catch (error) {
           console.error('No se pudo hidratar el espacio de trabajo', error)
           set({ workspace: cloneSeed(), hydrated: true, saving: false })
+        }
+      },
+
+      flushSave: async () => {
+        window.clearTimeout(saveTimer)
+        set({ saving: true })
+        try {
+          await persistWorkspace(get().workspace)
+          set({ saving: false, lastSavedAt: new Date().toISOString() })
+        } catch (error) {
+          console.error('No se pudo guardar el espacio de trabajo', error)
+          set({ saving: false })
+          throw error
         }
       },
 
