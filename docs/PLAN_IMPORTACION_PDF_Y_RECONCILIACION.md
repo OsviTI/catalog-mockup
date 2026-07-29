@@ -101,6 +101,11 @@ La extracción no creará productos definitivos. Generará candidatos con:
 - nivel de confianza;
 - observaciones.
 
+Estado actual: el alta de un catálogo exige un PDF base. Para la plantilla conocida se
+proponen regiones visuales por producto; PDF.js rasteriza la página a alta resolución y
+el usuario puede ampliar o reducir, desplazar y guardar el recorte como una imagen WebP
+persistente. El PDF original permanece intacto dentro de la sesión.
+
 ### Revisión
 
 La interfaz mostrará la página original y el candidato seleccionado. El usuario podrá:
@@ -111,6 +116,8 @@ La interfaz mostrará la página original y el candidato seleccionado. El usuari
 - descartar bloques promocionales;
 - reasignar categorías;
 - reemplazar recortes por imágenes originales;
+- ajustar escala y posición del recorte provisional;
+- guardar el recorte aprobado como imagen del producto;
 - aprobar productos individualmente o por lote.
 
 Solo los candidatos aprobados se convertirán en productos del catálogo.
@@ -241,9 +248,10 @@ La interfaz no dependerá de un proveedor específico.
 6. Carga y diagnóstico de PDF.
 7. Extracción nativa desde PDF de InDesign.
 8. Estudio de revisión PDF.
-9. Adaptadores de OCR pendientes de proveedor.
-10. Estudio creativo y adaptador de IA.
-11. Regeneración, vista previa y nueva versión PDF.
+9. Recorte visual editable desde páginas PDF.
+10. Adaptadores de OCR pendientes de proveedor.
+11. Estudio creativo y adaptador de IA.
+12. Regeneración, vista previa y nueva versión PDF.
 
 ## Criterios de aceptación iniciales
 
@@ -252,5 +260,7 @@ La interfaz no dependerá de un proveedor específico.
 - Los productos ausentes quedan visibles y sin modificación automática.
 - El usuario puede aplicar solamente cambios de precio.
 - Un PDF de InDesign produce candidatos revisables con página de origen.
+- Un catálogo nuevo no puede crearse sin conservar primero su PDF base.
+- Cada candidato visual muestra un recorte provisional editable y solo lo aplica después de guardarlo.
 - Toda aplicación de cambios conserva las versiones históricas.
 - Toda imagen generada o editada requiere aprobación antes de utilizarse.

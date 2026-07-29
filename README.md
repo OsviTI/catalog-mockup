@@ -5,13 +5,14 @@ Mockup funcional para automatizar la creación de catálogos comerciales PDF a p
 ## Funciones incluidas
 
 - Dashboard de catálogos con búsqueda, filtros, estados, duplicación y eliminación protegida.
-- Creación de catálogos y gestión manual de productos y categorías.
+- Creación obligatoria desde un PDF base, conservado como fuente para reconstruir y actualizar el catálogo.
 - Centro de importaciones con sesiones persistentes y evidencia de origen.
 - Comparación de Excel/CSV por código estable, con diferencias por campo y aplicación selectiva.
 - Resolución interactiva de conflictos: editar la fila, conservar el actual, usar una alternativa o agregarla con un código nuevo.
 - Bandeja de productos ausentes del Excel sin eliminación automática.
 - Diagnóstico de PDF de InDesign, extracción de texto nativo y candidatos revisables.
 - Reglas específicas para la plantilla oficial, confianza por completitud y señalización de campos no detectados.
+- Recortes visuales provisionales por producto, con zoom, desplazamiento y guardado persistente como imagen.
 - Modo de edición rápida de precios con variación porcentual.
 - Estudio creativo local para mejorar fotografías sin destruir el original y preparar conceptos visuales.
 - Descarga de una plantilla Excel oficial con hojas `Productos`, `Categorías` y `Catálogo`.
@@ -33,7 +34,7 @@ Mockup funcional para automatizar la creación de catálogos comerciales PDF a p
 - Zod para validación
 - `read-excel-file` y `write-excel-file` para Excel
 - jsPDF + html2canvas para PDF A4
-- PDF.js para diagnóstico, extracción y renderizado de PDF de origen
+- PDF.js para diagnóstico, extracción, renderizado de alta resolución y recortes del PDF de origen
 - Lucide para iconografía
 - Router hash local y tipado para navegación portable
 
@@ -92,6 +93,7 @@ La fuente oficial de decisiones es [docs/contexto_maestro_agente.md](docs/contex
 - Los datos son locales y demostrativos; no existen usuarios, permisos ni backend.
 - Las APIs de productos están previstas como evolución, pero no forman parte de esta etapa.
 - Los PDF sin texto nativo se diagnostican correctamente, pero la extracción OCR requiere elegir un proveedor externo.
+- La detección inicial de zonas de imagen utiliza reglas por plantilla y requiere aprobación humana antes de asociar el recorte al producto.
 - La plantilla oficial conserva sus reglas de portada, destacado, grilla y cierre; no pretende recuperar automáticamente tipografías licenciadas o efectos privados del archivo fuente de InDesign.
 - La generación visual mediante IA real queda desacoplada hasta definir proveedor, privacidad y costos; el estudio creativo ya implementa el flujo local, el historial y la edición básica.
 - El PDF está optimizado para distribución digital A4, no para preprensa con sangrado, perfiles CMYK o marcas de corte.

@@ -57,7 +57,7 @@ El material evidencia campos como nombre, código, precio, medidas, capacidad, m
 El mockup incluye:
 
 - dashboard con estadísticas, búsqueda, filtros y actividad;
-- alta, duplicación y eliminación protegida de catálogos;
+- alta obligatoria desde un PDF base, duplicación y eliminación protegida de catálogos;
 - gestión de productos y categorías;
 - edición de todos los campos comerciales y técnicos relevantes;
 - carga local de imágenes de producto y ambientales;
@@ -72,6 +72,10 @@ El mockup incluye:
 - extracción nativa de candidatos con página, evidencia y confianza;
 - confianza calculada por completitud, reglas específicas de la plantilla oficial y campos faltantes visibles;
 - revisión lado a lado con la página original renderizada;
+- decodificación de imágenes JPEG 2000 frecuentes en exportaciones de InDesign;
+- propuesta de región visual por candidato y miniatura junto a sus datos;
+- editor de recorte con escala y desplazamiento;
+- guardado persistente del recorte aprobado como imagen real del producto;
 - edición rápida de precios y operaciones porcentuales;
 - estudio creativo con mejora local no destructiva de fotografías;
 - conceptos visuales persistentes preparados para sustituirse por un adaptador de IA;
@@ -93,7 +97,7 @@ El mockup incluye:
 ## Evolución funcional pendiente
 
 - OCR de páginas escaneadas mediante un proveedor externo.
-- Recorte automático de las fotografías incrustadas en el PDF.
+- Detección visual más precisa para nuevas plantillas y páginas con composiciones no conocidas.
 - Reglas de extracción específicas por cada nueva plantilla de InDesign.
 - Reconstrucción de otras plantillas visuales que el cliente entregue en el futuro.
 - Generación y edición de imágenes mediante IA externa.

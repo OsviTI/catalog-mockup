@@ -143,6 +143,19 @@ export interface ProductFieldChange {
   selected: boolean
 }
 
+export interface PdfCropRegion {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
+export interface PdfCropAdjustments {
+  zoom: number
+  offsetX: number
+  offsetY: number
+}
+
 export interface PdfCandidate {
   id: string
   pageNumber: number
@@ -153,6 +166,10 @@ export interface PdfCandidate {
   reviewed: boolean
   extractionMethod?: 'template-rule' | 'native-generic'
   missingFields?: ImportableProductField[]
+  cropRegion?: PdfCropRegion
+  cropAdjustments?: PdfCropAdjustments
+  imageConfidence?: number
+  imageStatus?: 'provisional' | 'saved'
 }
 
 export interface PdfDiagnostics {
@@ -187,6 +204,7 @@ export interface ImportSession {
   source: ImportSource
   sourceName: string
   sourceAssetId?: string
+  isBaseDocument?: boolean
   status: ImportStatus
   createdAt: string
   updatedAt: string

@@ -1,4 +1,5 @@
 import { seedWorkspace } from '../data/seed'
+import { addProvisionalCropRegions } from './pdfCropRegions'
 import type { WorkspaceData } from '../types/catalog'
 
 export const migrateWorkspace = (value: WorkspaceData): WorkspaceData => {
@@ -6,6 +7,13 @@ export const migrateWorkspace = (value: WorkspaceData): WorkspaceData => {
   const previousVersion = workspace.schemaVersion ?? 1
 
   workspace.importSessions ??= []
+  workspace.importSessions.forEach((session) => {
+    if (session.source !== 'pdf' || !session.pdfCandidates?.length) return
+    addProvisionalCropRegions(
+      session.pdfCandidates,
+      Boolean(session.pdfDiagnostics?.templateHint),
+    )
+  })
   workspace.creativeAssets ??= []
   workspace.settings ??= structuredClone(seedWorkspace.settings)
   const existingTemplateIds = new Set(workspace.templates.map((template) => template.id))

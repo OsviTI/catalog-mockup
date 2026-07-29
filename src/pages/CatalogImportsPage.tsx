@@ -2,22 +2,27 @@ import {
   AlertTriangle,
   Check,
   ChevronRight,
+  Crop,
   FileSearch,
   FileSpreadsheet,
   FileText,
   History,
+  ImageIcon,
   LoaderCircle,
   ScanSearch,
   Trash2,
   Upload,
 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
+import PdfCropEditorModal from '../components/modals/PdfCropEditorModal'
+import PdfCropPreview from '../components/pdf/PdfCropPreview'
 import Badge from '../components/ui/Badge'
 import Button from '../components/ui/Button'
 import EmptyState from '../components/ui/EmptyState'
-import { loadAsset, persistAsset } from '../lib/database'
+import { loadAsset, persistAsset, persistBlob } from '../lib/database'
 import { importProductsFile } from '../lib/excel'
 import { formatCurrency, formatRelativeDate } from '../lib/format'
+import { exportPdfCrop } from '../lib/pdfCrop'
 import { analyzePdfCatalog, renderPdfPage } from '../lib/pdfImport'
 import {
   importSummary,
@@ -108,11 +113,15 @@ function PdfPagePreview({ session, pageNumber }: { session: ImportSession; pageN
 function CandidateEditor({
   candidate,
   sessionId,
+  sourceAssetId,
   onActivate,
+  onEditCrop,
 }: {
   candidate: PdfCandidate
   sessionId: string
+  sourceAssetId?: string
   onActivate: () => void
+  onEditCrop: () => void
 }) {
   const updateCandidate = useCatalogStore((state) => state.updatePdfCandidate)
   const workspace = useCatalogStore((state) => state.workspace)
@@ -148,12 +157,56 @@ function CandidateEditor({
             <Badge tone="primary">Plantilla reconocida</Badge>
           ) : null}
           {candidate.reviewed ? <Badge tone="success">Revisado manualmente</Badge> : null}
+          {candidate.imageStatus === 'saved' ? (
+            <Badge tone="success">Imagen guardada</Badge>
+          ) : candidate.cropRegion ? (
+            <Badge tone="warning">Recorte provisional</Badge>
+          ) : null}
           <Badge tone={candidate.confidence >= 0.8 ? 'success' : candidate.confidence >= 0.6 ? 'warning' : 'danger'}>
             {Math.round(candidate.confidence * 100)}% confianza
           </Badge>
         </div>
       </div>
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+      <div className="mt-4 grid gap-4 lg:grid-cols-[180px_minmax(0,1fr)]">
+        <div>
+          {sourceAssetId && candidate.cropRegion ? (
+            <PdfCropPreview
+              assetId={sourceAssetId}
+              pageNumber={candidate.pageNumber}
+              region={candidate.cropRegion}
+              adjustments={
+                candidate.cropAdjustments ?? { zoom: 1, offsetX: 0, offsetY: 0 }
+              }
+              outputWidth={360}
+              className="rounded-xl border border-border"
+            />
+          ) : (
+            <div className="flex min-h-36 flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-white p-3 text-center text-xs text-text-tertiary">
+              <ImageIcon className="h-6 w-6" />
+              Sin zona visual detectada
+            </div>
+          )}
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            className="mt-2 w-full"
+            icon={<Crop className="h-4 w-4" />}
+            disabled={!sourceAssetId || !candidate.cropRegion}
+            onClick={(event) => {
+              event.stopPropagation()
+              onEditCrop()
+            }}
+          >
+            Ajustar recorte
+          </Button>
+          {candidate.imageConfidence !== undefined ? (
+            <p className="mt-2 text-center text-[11px] font-semibold text-text-tertiary">
+              {Math.round(candidate.imageConfidence * 100)}% confianza visual
+            </p>
+          ) : null}
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
         <label className="text-xs font-semibold text-text-secondary">
           Nombre
           <input
@@ -280,6 +333,7 @@ function CandidateEditor({
             }
           />
         </label>
+        </div>
       </div>
       <div
         className={`mt-3 rounded-xl px-3 py-2 text-xs ${
@@ -628,6 +682,7 @@ export default function CatalogImportsPage() {
   const createExcelSession = useCatalogStore((state) => state.createExcelImportSession)
   const createPdfSession = useCatalogStore((state) => state.createPdfImportSession)
   const completePdfAnalysis = useCatalogStore((state) => state.completePdfAnalysis)
+  const updatePdfCandidate = useCatalogStore((state) => state.updatePdfCandidate)
   const failImportSession = useCatalogStore((state) => state.failImportSession)
   const preparePdfComparison = useCatalogStore((state) => state.preparePdfComparison)
   const applySession = useCatalogStore((state) => state.applyImportSession)
@@ -647,6 +702,8 @@ export default function CatalogImportsPage() {
   const [error, setError] = useState('')
   const [filter, setFilter] = useState<ImportChangeKind | 'all'>('all')
   const [pdfPage, setPdfPage] = useState(1)
+  const [cropCandidateId, setCropCandidateId] = useState('')
+  const [savingCrop, setSavingCrop] = useState(false)
   const selected = sessions.find((session) => session.id === selectedId) ?? sessions[0]
   const summary = useMemo(
     () => (selected ? importSummary(selected.changes) : null),
@@ -671,6 +728,9 @@ export default function CatalogImportsPage() {
       )
     : new Set<string>()
   const firstCandidatePage = selected?.pdfCandidates?.[0]?.pageNumber ?? 1
+  const cropCandidate = selected?.pdfCandidates?.find(
+    (candidate) => candidate.id === cropCandidateId,
+  )
 
   useEffect(() => {
     setPdfPage(firstCandidatePage)
@@ -724,6 +784,55 @@ export default function CatalogImportsPage() {
       setError(message)
     } finally {
       setBusy('')
+    }
+  }
+
+  const handleSaveCrop = async (
+    adjustments: NonNullable<PdfCandidate['cropAdjustments']>,
+  ) => {
+    if (
+      !selected?.sourceAssetId ||
+      !cropCandidate?.cropRegion ||
+      !selected.id
+    ) {
+      return
+    }
+    setSavingCrop(true)
+    setError('')
+    try {
+      const blob = await exportPdfCrop(
+        selected.sourceAssetId,
+        cropCandidate.pageNumber,
+        cropCandidate.cropRegion,
+        adjustments,
+      )
+      const safeCode =
+        cropCandidate.product.code.replace(/[^a-z0-9_-]+/gi, '-').replace(/^-|-$/g, '') ||
+        cropCandidate.id
+      const asset = await persistBlob(blob, `${safeCode}-pdf.webp`)
+      updatePdfCandidate(selected.id, cropCandidate.id, {
+        cropAdjustments: adjustments,
+        imageStatus: 'saved',
+        imageConfidence: 1,
+        reviewed: true,
+        product: {
+          image: {
+            assetId: asset.id,
+            name: asset.name,
+            focalPoint: 'center',
+          },
+        },
+      })
+      setCropCandidateId('')
+      setProgress(`Imagen de “${cropCandidate.product.name}” guardada desde el PDF.`)
+    } catch (caught) {
+      setError(
+        caught instanceof Error
+          ? caught.message
+          : 'No pudimos guardar el recorte del producto.',
+      )
+    } finally {
+      setSavingCrop(false)
     }
   }
 
@@ -845,6 +954,9 @@ export default function CatalogImportsPage() {
                   <Badge tone={selected.source === 'excel' ? 'success' : 'primary'}>
                     {selected.source.toUpperCase()}
                   </Badge>
+                  {selected.isBaseDocument ? (
+                    <Badge tone="success">Documento base</Badge>
+                  ) : null}
                 </div>
                 <p className="mt-1 text-sm text-text-secondary">
                   La fuente se conserva como evidencia; los cambios sólo se aplican después de revisarlos.
@@ -854,12 +966,18 @@ export default function CatalogImportsPage() {
                 variant="ghost"
                 size="sm"
                 icon={<Trash2 className="h-4 w-4" />}
+                disabled={selected.isBaseDocument}
+                title={
+                  selected.isBaseDocument
+                    ? 'El PDF base se conserva con el catálogo.'
+                    : undefined
+                }
                 onClick={() => {
                   deleteSession(selected.id)
                   setSelectedId('')
                 }}
               >
-                Quitar sesión
+                {selected.isBaseDocument ? 'PDF base protegido' : 'Quitar sesión'}
               </Button>
             </header>
 
@@ -931,7 +1049,12 @@ export default function CatalogImportsPage() {
                             key={candidate.id}
                             candidate={candidate}
                             sessionId={selected.id}
+                            sourceAssetId={selected.sourceAssetId}
                             onActivate={() => setPdfPage(candidate.pageNumber)}
+                            onEditCrop={() => {
+                              setPdfPage(candidate.pageNumber)
+                              setCropCandidateId(candidate.id)
+                            }}
                           />
                         ))}
                       </div>
@@ -1038,6 +1161,14 @@ export default function CatalogImportsPage() {
           </section>
         )}
       </div>
+      <PdfCropEditorModal
+        open={Boolean(cropCandidate)}
+        assetId={selected?.sourceAssetId}
+        candidate={cropCandidate}
+        saving={savingCrop}
+        onClose={() => setCropCandidateId('')}
+        onSave={(adjustments) => void handleSaveCrop(adjustments)}
+      />
     </div>
   )
 }

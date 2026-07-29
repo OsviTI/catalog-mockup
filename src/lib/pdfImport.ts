@@ -1,8 +1,11 @@
 import pdfWorkerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
+import { addProvisionalCropRegions } from './pdfCropRegions'
 import type {
   Category,
   ImportableProductField,
   PdfCandidate,
+  PdfCropAdjustments,
+  PdfCropRegion,
   PdfDiagnostics,
   Product,
 } from '../types/catalog'
@@ -17,6 +20,16 @@ const labeledCodePattern = /(?:c[oó]d(?:igo)?|sku)\s*[:.#-]?\s*([A-Z0-9][A-Z0-9
 const standaloneCodePattern = /^[A-Z0-9][A-Z0-9./_-]{4,}$/
 const ignoredNamePattern =
   /^(precio|c[oó]digo|sku|medidas?|material|pack|master|embalaje|capacidad|modelo|color|www\.|p[aá]gina)/i
+const pdfWasmUrl = `${import.meta.env.BASE_URL}pdfjs-wasm/`
+
+const openPdf = async (blob: Blob) => {
+  const pdfjs = await import('pdfjs-dist')
+  pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl
+  return pdfjs.getDocument({
+    data: new Uint8Array(await blob.arrayBuffer()),
+    wasmUrl: pdfWasmUrl,
+  }).promise
+}
 
 const normalizeText = (value: string) =>
   value
@@ -208,9 +221,7 @@ export const analyzePdfCatalog = async (
   categories: Category[],
   onProgress?: (currentPage: number, pageCount: number) => void,
 ) => {
-  const pdfjs = await import('pdfjs-dist')
-  pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl
-  const document = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise
+  const document = await openPdf(file)
   const pageTexts: PdfDiagnostics['pageTexts'] = []
   const candidates: PdfCandidate[] = []
   const defaultCategoryId = categories[0]?.id ?? ''
@@ -305,13 +316,15 @@ export const analyzePdfCatalog = async (
     )
   }
 
-  return { diagnostics, candidates, warnings }
+  return {
+    diagnostics,
+    candidates: addProvisionalCropRegions(candidates, Boolean(diagnostics.templateHint)),
+    warnings,
+  }
 }
 
 export const renderPdfPage = async (blob: Blob, pageNumber: number, canvas: HTMLCanvasElement) => {
-  const pdfjs = await import('pdfjs-dist')
-  pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl
-  const document = await pdfjs.getDocument({ data: new Uint8Array(await blob.arrayBuffer()) }).promise
+  const document = await openPdf(blob)
   const page = await document.getPage(Math.min(Math.max(1, pageNumber), document.numPages))
   const viewport = page.getViewport({ scale: 1.15 })
   const context = canvas.getContext('2d')
@@ -319,4 +332,52 @@ export const renderPdfPage = async (blob: Blob, pageNumber: number, canvas: HTML
   canvas.width = viewport.width
   canvas.height = viewport.height
   await page.render({ canvasContext: context, canvas, viewport }).promise
+}
+
+export const renderPdfPageBlob = async (
+  blob: Blob,
+  pageNumber: number,
+  scale = 2.4,
+) => {
+  const document = await openPdf(blob)
+  const page = await document.getPage(Math.min(Math.max(1, pageNumber), document.numPages))
+  const viewport = page.getViewport({ scale })
+  const canvas = window.document.createElement('canvas')
+  const context = canvas.getContext('2d')
+  if (!context) throw new Error('El navegador no pudo preparar la imagen de la página.')
+  canvas.width = Math.ceil(viewport.width)
+  canvas.height = Math.ceil(viewport.height)
+  await page.render({ canvasContext: context, canvas, viewport }).promise
+  return new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob(
+      (pageBlob) =>
+        pageBlob
+          ? resolve(pageBlob)
+          : reject(new Error('No se pudo convertir la página del PDF en imagen.')),
+      'image/png',
+    )
+  })
+}
+
+const clamp = (value: number, minimum: number, maximum: number) =>
+  Math.min(Math.max(value, minimum), maximum)
+
+export const effectivePdfCrop = (
+  region: PdfCropRegion,
+  adjustments: PdfCropAdjustments,
+): PdfCropRegion => {
+  const zoom = clamp(adjustments.zoom, 0.6, 3)
+  const width = clamp(region.width / zoom, 0.04, 1)
+  const height = clamp(region.height / zoom, 0.04, 1)
+  const centerX =
+    region.x + region.width / 2 + clamp(adjustments.offsetX, -1, 1) * region.width * 0.45
+  const centerY =
+    region.y + region.height / 2 + clamp(adjustments.offsetY, -1, 1) * region.height * 0.45
+
+  return {
+    x: clamp(centerX - width / 2, 0, 1 - width),
+    y: clamp(centerY - height / 2, 0, 1 - height),
+    width,
+    height,
+  }
 }

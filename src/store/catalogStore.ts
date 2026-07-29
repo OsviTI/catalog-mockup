@@ -58,7 +58,12 @@ interface CatalogStore {
     warnings: string[],
     importedFields: ImportableProductField[],
   ) => string
-  createPdfImportSession: (catalogId: string, sourceName: string, sourceAssetId: string) => string
+  createPdfImportSession: (
+    catalogId: string,
+    sourceName: string,
+    sourceAssetId: string,
+    isBaseDocument?: boolean,
+  ) => string
   completePdfAnalysis: (
     sessionId: string,
     diagnostics: PdfDiagnostics,
@@ -422,7 +427,12 @@ export const useCatalogStore = create<CatalogStore>()(
         return id
       },
 
-      createPdfImportSession: (catalogId, sourceName, sourceAssetId) => {
+      createPdfImportSession: (
+        catalogId,
+        sourceName,
+        sourceAssetId,
+        isBaseDocument = false,
+      ) => {
         const id = `import-${crypto.randomUUID()}`
         const createdAt = new Date().toISOString()
         commit((workspace) => {
@@ -432,6 +442,7 @@ export const useCatalogStore = create<CatalogStore>()(
             source: 'pdf',
             sourceName,
             sourceAssetId,
+            isBaseDocument,
             status: 'analyzing',
             createdAt,
             updatedAt: createdAt,
@@ -494,6 +505,16 @@ export const useCatalogStore = create<CatalogStore>()(
             (product) => product.catalogId === session.catalogId,
           )
           session.changes = buildImportComparison(current, incoming, undefined, true)
+          session.changes.forEach((change) => {
+            if (!change.productId || !change.incoming?.image.assetId) return
+            const currentProduct = current.find((product) => product.id === change.productId)
+            if (currentProduct?.image.assetId === change.incoming.image.assetId) return
+            if (change.kind === 'unchanged') change.kind = 'updated'
+            change.selected = true
+            change.note = [change.note, 'Incluye una imagen nueva recortada desde el PDF.']
+              .filter(Boolean)
+              .join(' ')
+          })
           refreshImportSessionStatus(session)
         }),
 
@@ -639,6 +660,9 @@ export const useCatalogStore = create<CatalogStore>()(
                   [fieldChange.field]: change.incoming?.[fieldChange.field],
                 })
               })
+              if (session.source === 'pdf' && change.incoming.image.assetId) {
+                current.image = structuredClone(change.incoming.image)
+              }
               current.updatedAt = new Date().toISOString()
               applied += 1
             } else if (
@@ -672,6 +696,7 @@ export const useCatalogStore = create<CatalogStore>()(
       deleteImportSession: (sessionId) =>
         commit((workspace) => {
           const session = workspace.importSessions.find((item) => item.id === sessionId)
+          if (session?.isBaseDocument) return
           if (session?.sourceAssetId) void removeAsset(session.sourceAssetId)
           workspace.importSessions = workspace.importSessions.filter((item) => item.id !== sessionId)
         }),

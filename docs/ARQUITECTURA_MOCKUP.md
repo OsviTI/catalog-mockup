@@ -27,6 +27,9 @@ Los componentes obtienen una URL temporal para cada imagen y la liberan al desmo
 
 - Excel/CSV se transforma primero en una sesión temporal y un conjunto de diferencias por campo.
 - PDF.js diagnostica documentos, extrae texto nativo, renderiza evidencia y produce candidatos revisables.
+- Cada catálogo nuevo conserva obligatoriamente su PDF base como activo protegido de la primera sesión.
+- Las páginas se rasterizan en alta resolución con los decodificadores WebAssembly de PDF.js. Las regiones normalizadas permiten previsualizar, desplazar y escalar un recorte sin modificar la fuente.
+- Un recorte aprobado se codifica como WebP, se guarda en `assets` y se incorpora a la imagen del producto cuando se aplican las decisiones de la sesión.
 - Zod y reglas de negocio generan errores o avisos.
 - El libro oficial se genera con tres hojas.
 - El PDF se construye página por página en A4.
@@ -51,13 +54,15 @@ Workspace
 └── Activity
 
 IndexedDB Assets
-└── Asset(id + Blob + metadata)
+├── PDF base(id + Blob + metadata)
+└── Imagen/recorte(id + Blob + metadata)
 ```
 
 ## Rendimiento
 
 - PDF.js, jsPDF, html2canvas y las librerías Excel utilizan importación dinámica.
 - Las imágenes permanecen como blobs y no inflan el estado de React.
+- La rasterización de páginas usada por varios candidatos se comparte mediante una caché en memoria por activo y página.
 - Las páginas filtran el store con selectores.
 - El guardado tiene un debounce breve para agrupar escritura durante edición.
 - Vite divide automáticamente los módulos de Excel y PDF en chunks independientes.
