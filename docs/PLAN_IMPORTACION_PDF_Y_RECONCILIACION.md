@@ -187,7 +187,9 @@ consulta después en Vista previa, compuesta sobre el PDF original.
 ## 6. Estudio creativo por producto
 
 La mejora de fotografía se abre desde la fila o ficha del producto. El usuario también
-puede reemplazar directamente la imagen sin entrar al editor creativo.
+puede reemplazar directamente la imagen sin entrar al editor creativo. Durante el
+escaneo, estas mismas acciones están disponibles en cada candidato y se mantienen como
+borrador hasta aplicar las decisiones.
 
 Tipos de trabajo:
 
@@ -211,6 +213,10 @@ Flujo:
 7. aprobar una variante;
 8. guardar original, resultado y descripción;
 9. vincularla al catálogo.
+
+En el mockup, la indicación creativa selecciona ajustes locales deterministas y muestra
+de forma explícita que se trata de una simulación. El contrato de interacción y el
+historial quedan preparados para sustituir esa operación por un proveedor generativo.
 
 La imagen generada nunca reemplazará automáticamente el original. Las versiones anteriores conservarán la imagen utilizada en su momento.
 

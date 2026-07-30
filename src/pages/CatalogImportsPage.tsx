@@ -8,28 +8,33 @@ import {
   FileText,
   History,
   ImageIcon,
+  ImagePlus,
   LoaderCircle,
   ScanSearch,
+  Sparkles,
   Trash2,
   Upload,
 } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import ProductImage from '../components/catalog/ProductImage'
+import { SourcePdfSinglePage } from '../components/catalog/SourcePdfCatalogDocument'
+import CandidateCreativeModal from '../components/modals/CandidateCreativeModal'
 import PdfCropEditorModal from '../components/modals/PdfCropEditorModal'
 import PdfCropPreview from '../components/pdf/PdfCropPreview'
 import Badge from '../components/ui/Badge'
 import Button from '../components/ui/Button'
 import EmptyState from '../components/ui/EmptyState'
-import { loadAsset, persistAsset, persistBlob } from '../lib/database'
+import { persistAsset, persistBlob } from '../lib/database'
 import { importProductsFile } from '../lib/excel'
 import { formatCurrency, formatRelativeDate } from '../lib/format'
 import { exportPdfCrop } from '../lib/pdfCrop'
-import { analyzePdfCatalog, renderPdfPage } from '../lib/pdfImport'
+import { analyzePdfCatalog } from '../lib/pdfImport'
 import {
   importSummary,
   invalidConflictResolutionIds,
   normalizeProductCode,
 } from '../lib/reconciliation'
-import { useParams } from '../lib/router'
+import { useNavigate, useParams } from '../lib/router'
 import { useCatalogStore } from '../store/catalogStore'
 import type {
   ImportChange,
@@ -84,28 +89,28 @@ const extractionFields: ImportableProductField[] = [
   'master',
 ]
 
-function PdfPagePreview({ session, pageNumber }: { session: ImportSession; pageNumber: number }) {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const [error, setError] = useState('')
-
-  useEffect(() => {
-    let active = true
-    if (!session.sourceAssetId || !canvasRef.current) return
-    loadAsset(session.sourceAssetId)
-      .then((asset) => {
-        if (!active || !asset || !canvasRef.current) return
-        return renderPdfPage(asset.blob, pageNumber, canvasRef.current)
-      })
-      .catch(() => active && setError('No se pudo renderizar esta página.'))
-    return () => {
-      active = false
-    }
-  }, [pageNumber, session.sourceAssetId])
-
+function PdfPagePreview({
+  session,
+  pageNumber,
+  products,
+  mode,
+}: {
+  session: ImportSession
+  pageNumber: number
+  products: PdfCandidate['product'][]
+  mode: 'original' | 'result'
+}) {
   return (
-    <div className="overflow-auto rounded-2xl border border-slate-300 bg-slate-200 p-3">
-      {error ? <p className="p-5 text-sm text-error">{error}</p> : null}
-      <canvas ref={canvasRef} className="mx-auto h-auto max-w-full bg-white shadow-lg" />
+    <div className="import-pdf-page-viewport">
+      <div className="import-pdf-page-scale">
+        <SourcePdfSinglePage
+          session={session}
+          pageNumber={pageNumber}
+          products={products}
+          mode={mode}
+          renderScale={1.35}
+        />
+      </div>
     </div>
   )
 }
@@ -114,14 +119,22 @@ function CandidateEditor({
   candidate,
   sessionId,
   sourceAssetId,
+  replacingImage,
+  preparingCreative,
   onActivate,
   onEditCrop,
+  onReplaceImage,
+  onOpenCreative,
 }: {
   candidate: PdfCandidate
   sessionId: string
   sourceAssetId?: string
+  replacingImage: boolean
+  preparingCreative: boolean
   onActivate: () => void
   onEditCrop: () => void
+  onReplaceImage: (file?: File) => void
+  onOpenCreative: () => void
 }) {
   const updateCandidate = useCatalogStore((state) => state.updatePdfCandidate)
   const workspace = useCatalogStore((state) => state.workspace)
@@ -169,7 +182,14 @@ function CandidateEditor({
       </div>
       <div className="mt-4 grid gap-4 lg:grid-cols-[180px_minmax(0,1fr)]">
         <div>
-          {sourceAssetId && candidate.cropRegion ? (
+          {candidate.product.image.assetId || candidate.product.image.src ? (
+            <ProductImage
+              image={candidate.product.image}
+              alt={candidate.product.name}
+              className="aspect-square h-auto w-full rounded-xl border border-border bg-white object-contain p-2"
+              loading="eager"
+            />
+          ) : sourceAssetId && candidate.cropRegion ? (
             <PdfCropPreview
               assetId={sourceAssetId}
               pageNumber={candidate.pageNumber}
@@ -186,20 +206,55 @@ function CandidateEditor({
               Sin zona visual detectada
             </div>
           )}
-          <Button
-            type="button"
-            size="sm"
-            variant="secondary"
-            className="mt-2 w-full"
-            icon={<Crop className="h-4 w-4" />}
-            disabled={!sourceAssetId || !candidate.cropRegion}
-            onClick={(event) => {
-              event.stopPropagation()
-              onEditCrop()
-            }}
-          >
-            Ajustar recorte
-          </Button>
+          <div className="mt-2 grid gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              className="w-full"
+              icon={<Crop className="h-4 w-4" />}
+              disabled={!sourceAssetId || !candidate.cropRegion}
+              onClick={(event) => {
+                event.stopPropagation()
+                onEditCrop()
+              }}
+            >
+              Ajustar recorte
+            </Button>
+            <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-border bg-white px-3 py-2 text-xs font-bold text-text-secondary transition hover:bg-slate-50">
+              {replacingImage ? (
+                <LoaderCircle className="h-4 w-4 animate-spin" />
+              ) : (
+                <ImagePlus className="h-4 w-4" />
+              )}
+              Reemplazar fotografía
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                className="sr-only"
+                disabled={replacingImage}
+                onChange={(event) => {
+                  const file = event.target.files?.[0]
+                  event.target.value = ''
+                  onReplaceImage(file)
+                }}
+              />
+            </label>
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              className="w-full text-violet-700"
+              icon={<Sparkles className="h-4 w-4" />}
+              loading={preparingCreative}
+              onClick={(event) => {
+                event.stopPropagation()
+                onOpenCreative()
+              }}
+            >
+              Mejorar · mockup creativo
+            </Button>
+          </div>
           {candidate.imageConfidence !== undefined ? (
             <p className="mt-2 text-center text-[11px] font-semibold text-text-tertiary">
               {Math.round(candidate.imageConfidence * 100)}% confianza visual
@@ -678,6 +733,7 @@ function ChangeRow({
 
 export default function CatalogImportsPage() {
   const { catalogId = '' } = useParams()
+  const navigate = useNavigate()
   const workspace = useCatalogStore((state) => state.workspace)
   const createExcelSession = useCatalogStore((state) => state.createExcelImportSession)
   const createPdfSession = useCatalogStore((state) => state.createPdfImportSession)
@@ -686,6 +742,7 @@ export default function CatalogImportsPage() {
   const failImportSession = useCatalogStore((state) => state.failImportSession)
   const preparePdfComparison = useCatalogStore((state) => state.preparePdfComparison)
   const applySession = useCatalogStore((state) => state.applyImportSession)
+  const flushSave = useCatalogStore((state) => state.flushSave)
   const selectTemplate = useCatalogStore((state) => state.selectTemplate)
   const selectFieldAcrossSession = useCatalogStore(
     (state) => state.selectImportFieldAcrossSession,
@@ -702,7 +759,19 @@ export default function CatalogImportsPage() {
   const [error, setError] = useState('')
   const [filter, setFilter] = useState<ImportChangeKind | 'all'>('all')
   const [pdfPage, setPdfPage] = useState(1)
+  const [pagePreviewMode, setPagePreviewMode] = useState<'original' | 'result'>(
+    'result',
+  )
   const [cropCandidateId, setCropCandidateId] = useState('')
+  const [creativeCandidateId, setCreativeCandidateId] = useState<string | null>(
+    null,
+  )
+  const [uploadingCandidateId, setUploadingCandidateId] = useState<string | null>(
+    null,
+  )
+  const [preparingCreativeId, setPreparingCreativeId] = useState<string | null>(
+    null,
+  )
   const [savingCrop, setSavingCrop] = useState(false)
   const selected = sessions.find((session) => session.id === selectedId) ?? sessions[0]
   const summary = useMemo(
@@ -731,9 +800,18 @@ export default function CatalogImportsPage() {
   const cropCandidate = selected?.pdfCandidates?.find(
     (candidate) => candidate.id === cropCandidateId,
   )
+  const candidatePreviewProducts = useMemo(
+    () =>
+      selected?.pdfCandidates
+        ?.filter((candidate) => candidate.selected)
+        .map((candidate) => candidate.product) ?? [],
+    [selected?.pdfCandidates],
+  )
 
   useEffect(() => {
     setPdfPage(firstCandidatePage)
+    setPagePreviewMode('result')
+    setCreativeCandidateId(null)
   }, [firstCandidatePage, selected?.id])
 
   const handleExcel = async (file?: File) => {
@@ -833,6 +911,110 @@ export default function CatalogImportsPage() {
       )
     } finally {
       setSavingCrop(false)
+    }
+  }
+
+  const handleReplaceCandidateImage = async (
+    candidate: PdfCandidate,
+    file?: File,
+  ) => {
+    if (!selected || !file) return
+    setError('')
+    setProgress('')
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      setError('Utiliza una imagen JPG, PNG o WebP.')
+      return
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setError('La imagen supera el máximo de 10 MB.')
+      return
+    }
+    setUploadingCandidateId(candidate.id)
+    try {
+      const asset = await persistAsset(file)
+      updatePdfCandidate(selected.id, candidate.id, {
+        imageStatus: 'saved',
+        imageConfidence: 1,
+        reviewed: true,
+        product: {
+          image: {
+            assetId: asset.id,
+            name: asset.name,
+            focalPoint: 'center',
+          },
+        },
+      })
+      setPagePreviewMode('result')
+      setProgress(
+        `La fotografía de “${candidate.product.name}” se reemplazó en el borrador.`,
+      )
+    } catch {
+      setError('No pudimos guardar la fotografía. Intenta nuevamente.')
+    } finally {
+      setUploadingCandidateId(null)
+    }
+  }
+
+  const handleApplyAndContinue = async (sessionId: string) => {
+    setError('')
+    applySession(sessionId)
+    const appliedSession = useCatalogStore
+      .getState()
+      .workspace.importSessions.find((session) => session.id === sessionId)
+    if (appliedSession?.status !== 'applied') {
+      setError(
+        'No se pudieron aplicar las decisiones. Revisa los conflictos y productos pendientes.',
+      )
+      return
+    }
+    await flushSave()
+    navigate(`/catalogos/${catalogId}/preview`)
+  }
+
+  const handleOpenCandidateCreative = async (candidate: PdfCandidate) => {
+    if (!selected) return
+    setPdfPage(candidate.pageNumber)
+    setPagePreviewMode('result')
+    if (
+      candidate.product.image.assetId ||
+      candidate.product.image.src ||
+      !selected.sourceAssetId ||
+      !candidate.cropRegion
+    ) {
+      setCreativeCandidateId(candidate.id)
+      return
+    }
+
+    setPreparingCreativeId(candidate.id)
+    setError('')
+    try {
+      const blob = await exportPdfCrop(
+        selected.sourceAssetId,
+        candidate.pageNumber,
+        candidate.cropRegion,
+        candidate.cropAdjustments ?? { zoom: 1, offsetX: 0, offsetY: 0 },
+      )
+      const safeCode =
+        candidate.product.code
+          .replace(/[^a-z0-9_-]+/gi, '-')
+          .replace(/^-|-$/g, '') || candidate.id
+      const asset = await persistBlob(blob, `${safeCode}-creativo.webp`)
+      updatePdfCandidate(selected.id, candidate.id, {
+        imageStatus: 'saved',
+        reviewed: true,
+        product: {
+          image: {
+            assetId: asset.id,
+            name: asset.name,
+            focalPoint: 'center',
+          },
+        },
+      })
+      setCreativeCandidateId(candidate.id)
+    } catch {
+      setError('No pudimos preparar la fotografía para el estudio creativo.')
+    } finally {
+      setPreparingCreativeId(null)
     }
   }
 
@@ -1038,9 +1220,63 @@ export default function CatalogImportsPage() {
                   <>
                     <div className="grid gap-5 2xl:grid-cols-[minmax(300px,0.85fr)_minmax(380px,1.15fr)]">
                       <div className="2xl:sticky 2xl:top-4 2xl:self-start">
+                        <div className="mb-3 rounded-2xl border border-border bg-white p-3">
+                          <div className="flex flex-wrap items-center justify-between gap-3">
+                            <div>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className="text-sm font-bold text-text">
+                                  Página {pdfPage}
+                                </p>
+                                {pagePreviewMode === 'result' ? (
+                                  <Badge tone="primary">Resultado en vivo</Badge>
+                                ) : (
+                                  <Badge tone="neutral">Evidencia original</Badge>
+                                )}
+                              </div>
+                              <p className="mt-1 text-xs leading-5 text-text-tertiary">
+                                {pagePreviewMode === 'result'
+                                  ? 'Refleja inmediatamente los campos, recortes y fotografías del borrador.'
+                                  : 'Muestra el archivo subido sin ninguna modificación.'}
+                              </p>
+                            </div>
+                            <div className="flex rounded-xl border border-border bg-slate-50 p-1">
+                              <button
+                                type="button"
+                                onClick={() => setPagePreviewMode('result')}
+                                className={`rounded-lg px-3 py-2 text-xs font-bold transition ${
+                                  pagePreviewMode === 'result'
+                                    ? 'bg-white text-primary shadow-sm'
+                                    : 'text-text-tertiary'
+                                }`}
+                              >
+                                Resultado
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setPagePreviewMode('original')}
+                                className={`rounded-lg px-3 py-2 text-xs font-bold transition ${
+                                  pagePreviewMode === 'original'
+                                    ? 'bg-white text-text shadow-sm'
+                                    : 'text-text-tertiary'
+                                }`}
+                              >
+                                PDF original
+                              </button>
+                            </div>
+                          </div>
+                          {!selected.pdfDiagnostics.templateHint ? (
+                            <p className="mt-3 rounded-xl border border-warning/20 bg-warning/5 p-3 text-xs leading-5 text-warning-strong">
+                              Esta plantilla aún no tiene zonas editables mapeadas. El
+                              original seguirá visible, pero el resultado no podrá
+                              posicionar los campos hasta reconocer su estructura.
+                            </p>
+                          ) : null}
+                        </div>
                         <PdfPagePreview
                           session={selected}
                           pageNumber={pdfPage}
+                          products={candidatePreviewProducts}
+                          mode={pagePreviewMode}
                         />
                       </div>
                       <div className="max-h-[72vh] space-y-3 overflow-y-auto overscroll-contain pr-2">
@@ -1050,11 +1286,19 @@ export default function CatalogImportsPage() {
                             candidate={candidate}
                             sessionId={selected.id}
                             sourceAssetId={selected.sourceAssetId}
+                            replacingImage={uploadingCandidateId === candidate.id}
+                            preparingCreative={preparingCreativeId === candidate.id}
                             onActivate={() => setPdfPage(candidate.pageNumber)}
                             onEditCrop={() => {
                               setPdfPage(candidate.pageNumber)
                               setCropCandidateId(candidate.id)
                             }}
+                            onReplaceImage={(file) =>
+                              void handleReplaceCandidateImage(candidate, file)
+                            }
+                            onOpenCreative={() =>
+                              void handleOpenCandidateCreative(candidate)
+                            }
                           />
                         ))}
                       </div>
@@ -1065,7 +1309,7 @@ export default function CatalogImportsPage() {
                         onClick={() => preparePdfComparison(selected.id)}
                         disabled={!selected.pdfCandidates.some((candidate) => candidate.selected)}
                       >
-                        Comparar candidatos con el catálogo
+                        Guardar revisión y comparar
                       </Button>
                     </div>
                   </>
@@ -1143,9 +1387,11 @@ export default function CatalogImportsPage() {
                       pendingConflicts > 0 ||
                       invalidConflictIds.size > 0
                     }
-                    onClick={() => applySession(selected.id)}
+                    onClick={() => void handleApplyAndContinue(selected.id)}
                   >
-                    {selected.status === 'applied' ? 'Cambios aplicados' : 'Aplicar decisiones'}
+                    {selected.status === 'applied'
+                      ? 'Cambios aplicados'
+                      : 'Aplicar cambios y continuar a Vista previa'}
                   </Button>
                 </footer>
               </>
@@ -1168,6 +1414,12 @@ export default function CatalogImportsPage() {
         saving={savingCrop}
         onClose={() => setCropCandidateId('')}
         onSave={(adjustments) => void handleSaveCrop(adjustments)}
+      />
+      <CandidateCreativeModal
+        open={Boolean(creativeCandidateId)}
+        sessionId={selected?.id ?? ''}
+        candidateId={creativeCandidateId}
+        onClose={() => setCreativeCandidateId(null)}
       />
     </div>
   )

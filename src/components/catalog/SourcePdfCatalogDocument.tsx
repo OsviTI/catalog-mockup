@@ -12,6 +12,16 @@ interface SourcePdfCatalogDocumentProps {
   onReady?: () => void
 }
 
+interface SourcePdfSinglePageProps {
+  session: ImportSession
+  pageNumber: number
+  products: Product[]
+  mode?: 'original' | 'result'
+  renderScale?: number
+}
+
+const ignoreRendered = () => undefined
+
 const chunks = <Value,>(items: Value[], size: number) => {
   const output: Value[][] = []
   for (let index = 0; index < items.length; index += size) {
@@ -210,6 +220,63 @@ function SourcePdfPage({
           })
         : null}
     </article>
+  )
+}
+
+export function SourcePdfSinglePage({
+  session,
+  pageNumber,
+  products,
+  mode = 'result',
+  renderScale = 1.25,
+}: SourcePdfSinglePageProps) {
+  const [blob, setBlob] = useState<Blob>()
+  const candidates = useMemo(
+    () =>
+      [...(session.pdfCandidates ?? [])].sort(
+        (a, b) => a.product.order - b.product.order,
+      ),
+    [session.pdfCandidates],
+  )
+
+  useEffect(() => {
+    let active = true
+    setBlob(undefined)
+    if (!session.sourceAssetId) return
+    loadAsset(session.sourceAssetId).then((asset) => {
+      if (active) setBlob(asset?.blob)
+    })
+    return () => {
+      active = false
+    }
+  }, [session.sourceAssetId])
+
+  const productForCandidate = useMemo(
+    () => matchSourceCandidatesToProducts(candidates, products).mapping,
+    [candidates, products],
+  )
+  const pageCandidates = useMemo(
+    () => candidates.filter((candidate) => candidate.pageNumber === pageNumber),
+    [candidates, pageNumber],
+  )
+
+  if (!blob) {
+    return <div className="source-pdf-page source-pdf-loading">Cargando página…</div>
+  }
+
+  return (
+    <SourcePdfPage
+      blob={blob}
+      pageNumber={pageNumber}
+      pageCandidates={pageCandidates}
+      productForCandidate={productForCandidate}
+      recognizedTemplate={
+        mode === 'result' &&
+        session.pdfDiagnostics?.templateHint === 'template-crystal-official'
+      }
+      renderScale={renderScale}
+      onRendered={ignoreRendered}
+    />
   )
 }
 

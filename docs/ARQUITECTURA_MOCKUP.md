@@ -31,11 +31,11 @@ que el botón **Continuar** y las pestañas confirman la escritura actual en Ind
 
 - Excel/CSV se transforma primero en una sesión temporal y un conjunto de diferencias por campo.
 - PDF.js diagnostica documentos, extrae texto nativo, renderiza evidencia y produce candidatos revisables.
-- Importaciones se limita al diagnóstico, la revisión y la conciliación de datos; la composición completa del documento se muestra exclusivamente en Vista previa.
+- Importaciones se limita al diagnóstico, la revisión y la conciliación de datos. La página activa puede alternar entre evidencia original y resultado compuesto con candidatos temporales; la composición completa del documento permanece exclusivamente en Vista previa.
 - Cada catálogo nuevo conserva obligatoriamente su PDF base como activo protegido de la primera sesión.
 - Las páginas se rasterizan en alta resolución con los decodificadores WebAssembly de PDF.js. Las regiones normalizadas permiten previsualizar, desplazar y escalar un recorte sin modificar la fuente.
 - Vista previa renderiza cada página del PDF base como fondo inalterado. Para la plantilla oficial reconocida compara el producto vigente con la extracción original y superpone sólo las fichas modificadas; los productos agregados se incorporan en páginas nuevas antes del cierre.
-- Un recorte aprobado se codifica como WebP, se guarda en `assets` y se incorpora a la imagen del producto cuando se aplican las decisiones de la sesión.
+- Un recorte aprobado se codifica como WebP y se guarda en `assets`. Desde el mismo candidato puede sustituirse la fotografía o crear una versión local mejorada; el resultado permanece en la sesión hasta aplicar sus decisiones.
 - Zod y reglas de negocio generan errores o avisos.
 - El libro oficial se genera con tres hojas.
 - El PDF se construye página por página en A4.
@@ -70,7 +70,7 @@ IndexedDB Assets
 - Las imágenes permanecen como blobs y no inflan el estado de React.
 - La rasterización de páginas usada por varios candidatos se comparte mediante una caché en memoria por activo y página.
 - Las páginas filtran el store con selectores.
-- Los ajustes creativos y el reemplazo de imagen se abren desde el producto; no requieren cargar una pantalla creativa completa.
+- Los ajustes creativos y el reemplazo de imagen se abren desde el producto oficial o desde su candidato de importación; no requieren cargar una pantalla creativa completa.
 - El guardado tiene un debounce breve para agrupar escritura durante edición.
 - Vite divide automáticamente los módulos de Excel y PDF en chunks independientes.
 - El PDF usa fuera de pantalla la misma composición basada en el documento original, sin el zoom de interfaz.

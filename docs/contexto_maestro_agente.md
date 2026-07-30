@@ -77,8 +77,9 @@ El mockup incluye:
 - editor de recorte con escala y desplazamiento;
 - guardado persistente del recorte aprobado como imagen real del producto;
 - edición de precio integrada en cada producto y en las decisiones de importación;
-- reemplazo directo de fotografía y estudio creativo contextual por producto;
-- Importaciones enfocada en revisar y aplicar datos, sin duplicar allí la vista completa;
+- reemplazo directo de fotografía y estudio creativo contextual por producto o candidato;
+- Importaciones enfocada en revisar y aplicar datos, con comparación de la página activa entre PDF original y resultado temporal, sin duplicar allí el catálogo completo;
+- flujo creativo local con indicaciones simuladas, ajustes no destructivos y una señal explícita de que no ejecuta IA generativa real;
 - vista previa y exportación de todas las páginas sobre el PDF base original, preservando lo que no cambió y recomponiendo sólo las fichas actualizadas de la plantilla reconocida;
 - navegación reducida a Datos, Importaciones, Diseño, Vista previa y Versiones;
 - botón Continuar y escritura inmediata antes de cada cambio de etapa;

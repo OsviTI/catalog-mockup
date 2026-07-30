@@ -13,8 +13,10 @@ Mockup funcional para automatizar la creación de catálogos comerciales PDF a p
 - Diagnóstico de PDF de InDesign, extracción de texto nativo y candidatos revisables.
 - Reglas específicas para la plantilla oficial, confianza por completitud y señalización de campos no detectados.
 - Recortes visuales provisionales por producto, con zoom, desplazamiento y guardado persistente como imagen.
+- Comparador por página entre el PDF original y el resultado en vivo de los candidatos todavía no aplicados.
 - Edición de precios dentro de la ficha y de las revisiones de importación, sin una etapa separada.
-- Acciones por producto para reemplazar su fotografía o abrir una mejora creativa no destructiva.
+- Acciones por producto y candidato para reemplazar su fotografía o abrir una mejora creativa no destructiva.
+- Asistencia creativa simulada mediante indicaciones y ajustes locales, claramente diferenciada de una IA generativa real.
 - Vista previa y descarga construidas sobre todas las páginas del PDF original, conservando su diseño y reemplazando sólo las zonas modificadas.
 - Descarga de una plantilla Excel oficial con hojas `Productos`, `Categorías` y `Catálogo`.
 - Carga de imágenes de producto e imágenes ambientales por categoría.
